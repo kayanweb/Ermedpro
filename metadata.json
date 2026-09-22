@@ -1,0 +1,6 @@
+{
+  "name": "نظام أوقات انتظار الطوارئ | ER Waiting Time",
+  "description": "نظام إدارة وتحليل أوقات انتظار ونقل مرضى الطوارئ مع إدارة الحسابات والكوادر ومنظومة رقابة الجودة وتدقيق حركات المستخدمين",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
