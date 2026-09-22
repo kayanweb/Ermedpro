@@ -156,99 +156,374 @@ export function exportToCSV(records: ERRecord[], filenamePrefix = 'ER_Waiting_Ti
   URL.revokeObjectURL(url);
 }
 
-export function printOfficialReport(records: ERRecord[]): void {
+export interface PrintReportOptions {
+  hospitalName?: string;
+  reportTitle?: string;
+  columns?: {
+    showIndex?: boolean;
+    showDate?: boolean;
+    showName?: boolean;
+    showMrn?: boolean;
+    showTriage?: boolean;
+    showContract?: boolean;
+    showOrderTime?: boolean;
+    showActualTime?: boolean;
+    showDelay?: boolean;
+    showCauses?: boolean;
+    showDestination?: boolean;
+    showBed?: boolean;
+    showDischarge?: boolean;
+    showEntryMethod?: boolean;
+  };
+}
+
+export function printOfficialReport(records: ERRecord[], options?: PrintReportOptions): void {
   const total = records.length;
   const icu = records.filter(r => r.dept === 'ICU').length;
   const inter = records.filter(r => r.dept === 'Intermediate').length;
   const inp = records.filter(r => r.dept === 'Inpatient').length;
   const un = records.filter(r => !r.dept || (r.dept !== 'ICU' && r.dept !== 'Intermediate' && r.dept !== 'Inpatient')).length;
 
+  const cols = {
+    showIndex: options?.columns?.showIndex ?? true,
+    showDate: options?.columns?.showDate ?? true,
+    showName: options?.columns?.showName ?? true,
+    showMrn: options?.columns?.showMrn ?? true,
+    showTriage: options?.columns?.showTriage ?? true,
+    showContract: options?.columns?.showContract ?? true,
+    showOrderTime: options?.columns?.showOrderTime ?? true,
+    showActualTime: options?.columns?.showActualTime ?? true,
+    showDelay: options?.columns?.showDelay ?? true,
+    showCauses: options?.columns?.showCauses ?? true,
+    showDestination: options?.columns?.showDestination ?? true,
+    showBed: options?.columns?.showBed ?? true,
+    showDischarge: options?.columns?.showDischarge ?? true,
+    showEntryMethod: options?.columns?.showEntryMethod ?? false,
+  };
+
   const rowsHTML = records
     .map((r, i) => {
       const reasonObj = REASONS.find(x => x.code === r.reason);
-      const reasonText = reasonObj ? reasonObj.text : (r.reason || '-');
+      const reasonText = reasonObj ? `${reasonObj.text} (${reasonObj.textAr})` : (r.reason || '-');
       const colors = getDelayColorHex(r.delay);
 
-      return `<tr>
-        <td style="padding:6px; border:1px solid #334155; text-align:center;">${i + 1}</td>
-        <td style="padding:6px; border:1px solid #334155; text-align:center;">${fmtDate(r.order)}</td>
-        <td style="padding:6px; border:1px solid #334155; text-align:right; font-weight:bold;">${r.name}</td>
-        <td style="padding:6px; border:1px solid #334155; text-align:center; font-family:monospace;">${r.medical}</td>
-        <td style="padding:6px; border:1px solid #334155; text-align:center; font-weight:bold; color:#581c87;">${r.contract || 'طوارئ المستشفى'}</td>
-        <td style="padding:6px; border:1px solid #334155; text-align:center;">${fmtDateTime(r.order)}</td>
-        <td style="padding:6px; border:1px solid #334155; text-align:center;">${r.actual ? fmtDateTime(r.actual) : '-'}</td>
-        <td style="padding:6px; border:1px solid #334155; text-align:center; background:${colors.bg}; color:${colors.text}; font-weight:bold;">${r.delay ?? '-'}</td>
-        <td style="padding:6px; border:1px solid #334155; text-align:right;">${reasonText}</td>
-        <td style="padding:6px; border:1px solid #334155; text-align:center; font-weight:bold;">${r.dept || 'غير محدد'}</td>
+      const delayFormatted = r.delay !== null && r.delay !== undefined
+        ? `${r.delay} دقيقة (${(r.delay / 60).toFixed(1)} س)`
+        : '-';
+
+      const statusBadge = r.status === 'Cancelled'
+        ? '<span style="color:#b91c1c; font-weight:bold;">ملغي ✕</span>'
+        : r.actual
+        ? fmtDateTime(r.actual)
+        : '<span style="color:#b45309; font-weight:bold;">قيد الانتظار ⏳</span>';
+
+      return `<tr style="page-break-inside: avoid;">
+        ${cols.showIndex ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; font-family:monospace; color:#64748b; font-size:7.5pt;">${i + 1}</td>` : ''}
+        ${cols.showDate ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; font-family:monospace; white-space:nowrap; font-size:7.5pt;">${fmtDate(r.order)}</td>` : ''}
+        ${cols.showName ? `<td style="padding:4px 4px; border:1px solid #cbd5e1; text-align:right; font-weight:bold; color:#0f172a; font-size:8pt;">
+          ${r.name}
+          ${r.cameFrom ? `<div style="font-size:7pt; font-weight:normal; color:#64748b; margin-top:1px;">${r.cameFrom} ${r.visitNo ? `• زيارة: ${r.visitNo}` : ''}</div>` : ''}
+        </td>` : ''}
+        ${cols.showMrn ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; font-family:monospace; font-weight:600; color:#1e293b; font-size:7.5pt;">${r.medical}</td>` : ''}
+        ${cols.showTriage ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; font-weight:bold; font-size:7.5pt;">
+          <span style="display:inline-block; padding:1px 4px; border-radius:3px; font-size:7pt; background:${
+            r.triageLevel?.includes('Level 1') ? '#fee2e2; color:#991b1b; border:1px solid #fca5a5;' :
+            r.triageLevel?.includes('Level 2') ? '#ffedd5; color:#9a3412; border:1px solid #fdba74;' :
+            r.triageLevel?.includes('Level 4') ? '#e0f2fe; color:#075985; border:1px solid #7dd3fc;' :
+            r.triageLevel?.includes('Level 5') ? '#f1f5f9; color:#334155; border:1px solid #cbd5e1;' :
+            '#dcfce7; color:#166534; border:1px solid #86efac;'
+          }">${r.triageLevel || 'Level 3 - عادي'}</span>
+        </td>` : ''}
+        ${cols.showContract ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; font-weight:bold; color:#581c87; font-size:7.5pt;">${r.contract || 'طوارئ المستشفى'}</td>` : ''}
+        ${cols.showOrderTime ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; font-family:monospace; font-size:7.5pt; white-space:nowrap;">${fmtDateTime(r.order)}</td>` : ''}
+        ${cols.showActualTime ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; font-family:monospace; font-size:7.5pt; white-space:nowrap;">${statusBadge}</td>` : ''}
+        ${cols.showDelay ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; background:${colors.bg}; color:${colors.text}; font-weight:bold; font-size:7.5pt; font-family:monospace;">${delayFormatted}</td>` : ''}
+        ${cols.showCauses ? `<td style="padding:4px 3px; border:1px solid #cbd5e1; text-align:right; font-size:7pt; color:#334155;">${reasonText}</td>` : ''}
+        ${cols.showDestination ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; font-weight:bold; font-size:7.5pt; background:#f8fafc; color:#0f172a;">${r.dept || '<span style="color:#b91c1c;">غير محدد</span>'}</td>` : ''}
+        ${cols.showBed ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; font-family:monospace; font-weight:600; font-size:7.5pt;">${r.bedNumber || '-'}</td>` : ''}
+        ${cols.showDischarge ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; font-size:7pt; color:#1e293b;">${r.dischargeType || '-'}</td>` : ''}
+        ${cols.showEntryMethod ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; font-size:7pt; color:#64748b;">${r.entryMethod === 'Imported' ? 'سحب آلي' : 'يدوي'}</td>` : ''}
       </tr>`;
     })
     .join('');
+
+  const reportTitle = options?.reportTitle || 'النموذج الرسمي المعتمد لأوقات انتظار الطوارئ (ER for Waiting Time)';
+  const hospitalName = options?.hospitalName || 'مستشفى الطوارئ العام';
 
   const html = `<!DOCTYPE html>
   <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8">
-    <title>ER for Waiting Time</title>
+    <title>ER for Waiting Time - Official Report</title>
     <style>
-      @page { size: landscape; margin: 10mm; }
-      body { font-family: Arial, Tahoma, sans-serif; color: #000; padding: 10px; margin: 0; }
-      .header-box { text-align: center; background: #b4c7e7; color: #000; padding: 10px; font-size: 16pt; font-weight: bold; border: 1px solid #333; }
-      .summary-box { display: flex; border: 1px solid #333; border-top: none; font-size: 11pt; font-weight: bold; }
-      .summary-box > div { padding: 7px; flex: 1; text-align: center; border-left: 1px solid #333; background: #f8f9fa; }
-      .summary-box > div:first-child { background: #fff; color: #dc3545; }
-      .summary-box .icu { color: #0d6efd; }
-      .summary-box .inter { color: #198754; }
-      .summary-box .inp { color: #6f42c1; }
-      .summary-box .un { color: #dc3545; }
-      table { width: 100%; border-collapse: collapse; margin-top: 0; font-size: 10pt; }
-      th { background: #1f3864; color: #fff; border: 1px solid #333; padding: 8px 4px; text-align: center; font-weight: bold; }
-      td { border: 1px solid #333; }
-      .footer { margin-top: 15px; display: flex; justify-content: space-between; font-size: 11px; color: #555; }
+      @page {
+        size: A4 landscape;
+        margin: 5mm 6mm 6mm 6mm;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html, body {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        color: #0f172a;
+        font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Tahoma, Arial, sans-serif;
+        font-size: 8pt;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .report-container {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      .hospital-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #0f172a;
+        padding-bottom: 5px;
+        margin-bottom: 5px;
+      }
+      .hospital-info h1 {
+        margin: 0;
+        font-size: 13pt;
+        font-weight: 800;
+        color: #0f172a;
+      }
+      .hospital-info p {
+        margin: 1px 0 0 0;
+        font-size: 8pt;
+        color: #64748b;
+      }
+      .report-stamp {
+        text-align: left;
+        font-size: 8pt;
+        color: #475569;
+        font-family: monospace;
+      }
+      .header-box {
+        text-align: center;
+        background: #b4c7e7 !important;
+        color: #0f172a !important;
+        padding: 6px 10px;
+        font-size: 11pt;
+        font-weight: 800;
+        border: 2px solid #1e293b;
+        letter-spacing: 0.5px;
+      }
+      .summary-box {
+        display: flex;
+        border: 2px solid #1e293b;
+        border-top: none;
+        font-size: 8.5pt;
+        font-weight: 800;
+        background: #ffffff;
+      }
+      .summary-box > div {
+        padding: 5px;
+        flex: 1;
+        text-align: center;
+        border-left: 1px solid #1e293b;
+        background: #f8fafc;
+      }
+      .summary-box > div:last-child {
+        border-left: none;
+      }
+      .summary-box > div:first-child {
+        background: #ffffff;
+        color: #dc2626;
+      }
+      .summary-box .icu { color: #0284c7; }
+      .summary-box .inter { color: #16a34a; }
+      .summary-box .inp { color: #7c3aed; }
+      .summary-box .un { color: #dc2626; }
+      .summary-box .metric-num {
+        font-family: monospace;
+        font-size: 9.5pt;
+        margin-right: 4px;
+      }
+      table {
+        width: 100% !important;
+        table-layout: fixed !important;
+        border-collapse: collapse;
+        margin-top: -1px;
+        font-size: 7.5pt;
+        border: 2px solid #1e293b;
+      }
+      thead {
+        display: table-header-group;
+      }
+      tr {
+        page-break-inside: avoid;
+      }
+      th {
+        background: #1f3864 !important;
+        color: #ffffff !important;
+        border: 1px solid #475569;
+        padding: 5px 2px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 7.5pt;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: break-word;
+      }
+      th.dest-th {
+        background: #d97706 !important;
+        color: #ffffff !important;
+      }
+      td {
+        border: 1px solid #cbd5e1;
+        padding: 4px 2px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: break-word;
+      }
+      tbody tr:nth-child(even) {
+        background-color: #f8fafc;
+      }
+      .legend-strip {
+        margin-top: 5px;
+        padding: 4px 8px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        font-size: 7.5pt;
+        color: #475569;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .legend-dots {
+        display: flex;
+        gap: 10px;
+      }
+      .dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        margin-left: 3px;
+        vertical-align: middle;
+      }
+      .dot-green { background: #10b981; }
+      .dot-amber { background: #f59e0b; }
+      .dot-red { background: #ef4444; }
+      .footer-signatures {
+        margin-top: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding: 6px 10px;
+        border-top: 1px dashed #cbd5e1;
+        font-size: 8pt;
+        color: #1e293b;
+      }
+      .sig-block {
+        text-align: center;
+        min-width: 140px;
+      }
+      .sig-line {
+        margin-top: 25px;
+        border-top: 1px solid #0f172a;
+        padding-top: 3px;
+        font-weight: bold;
+      }
+      @media print {
+        @page {
+          size: A4 landscape;
+          margin: 5mm 6mm 6mm 6mm;
+        }
+        body { padding: 0 !important; margin: 0 !important; }
+        .no-print { display: none !important; }
+      }
     </style>
   </head>
   <body>
-    <div class="header-box">ER for Waiting Time</div>
-    <div class="summary-box">
-      <div>Total Patients Admission: ${total}</div>
-      <div class="icu">ICU: ${icu}</div>
-      <div class="inter">Intermediate: ${inter}</div>
-      <div class="inp">Inpatient: ${inp}</div>
-      <div class="un">Unassigned: ${un}</div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Date</th>
-          <th>Patient Name</th>
-          <th>Medical No.</th>
-          <th>Contract (التعاقد)</th>
-          <th>Transfer Order Time</th>
-          <th>Actual Transfer Time</th>
-          <th>Delay /Minutes</th>
-          <th>Causes of Delay</th>
-          <th>Destination</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rowsHTML}
-      </tbody>
-    </table>
-    <div class="footer">
-      <div>تاريخ وتوقيت الطباعة: ${new Date().toLocaleString('ar-EG')}</div>
-      <div>نظام ER Waiting Time Management</div>
-      <div>اعتماد مسؤول الطوارئ: ........................</div>
+    <div class="report-container">
+      <div class="hospital-header">
+        <div class="hospital-info">
+          <h1>${hospitalName} - إدارة الطوارئ والحالات الحرجة</h1>
+          <p>${reportTitle}</p>
+        </div>
+        <div class="report-stamp">
+          <div>تاريخ الطباعة: <b>${new Date().toLocaleDateString('ar-EG')}</b></div>
+          <div>التوقيت: <b>${new Date().toLocaleTimeString('ar-EG')}</b></div>
+          <div>عدد الحالات: <b>${total}</b></div>
+        </div>
+      </div>
+
+      <div class="header-box">ER for Waiting Time - سجل أوقات انتظار الطوارئ</div>
+      <div class="summary-box">
+        <div>Total Patients Admission: <span class="metric-num">${total}</span></div>
+        <div class="icu">ICU: <span class="metric-num">${icu}</span></div>
+        <div class="inter">Intermediate: <span class="metric-num">${inter}</span></div>
+        <div class="inp">Inpatient: <span class="metric-num">${inp}</span></div>
+        <div class="un">Unassigned: <span class="metric-num">${un}</span></div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            ${cols.showIndex ? '<th style="width:2.5%;">#</th>' : ''}
+            ${cols.showDate ? '<th style="width:6.5%;">Date</th>' : ''}
+            ${cols.showName ? '<th style="width:13.5%; text-align:right;">Patient Name</th>' : ''}
+            ${cols.showMrn ? '<th style="width:7.5%;">Medical No.</th>' : ''}
+            ${cols.showTriage ? '<th style="width:6.5%;">Triage 🚨</th>' : ''}
+            ${cols.showContract ? '<th style="width:7.5%;">Contract 💰</th>' : ''}
+            ${cols.showOrderTime ? '<th style="width:9.5%;">Transfer Order</th>' : ''}
+            ${cols.showActualTime ? '<th style="width:9.5%;">Actual Transfer</th>' : ''}
+            ${cols.showDelay ? '<th style="width:8.5%;">Delay</th>' : ''}
+            ${cols.showCauses ? '<th style="width:12.5%; text-align:right;">Causes of Delay</th>' : ''}
+            ${cols.showDestination ? '<th class="dest-th" style="width:8%;">Destination ➜</th>' : ''}
+            ${cols.showBed ? '<th style="width:4%;">Bed #</th>' : ''}
+            ${cols.showDischarge ? '<th style="width:8%;">Discharge</th>' : ''}
+            ${cols.showEntryMethod ? '<th style="width:5.5%;">Entry</th>' : ''}
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHTML}
+        </tbody>
+      </table>
+
+      <div class="legend-strip">
+        <div class="legend-dots">
+          <span><span class="dot dot-green"></span>أقل من 30 دقيقة (ضمن المستهدف)</span>
+          <span><span class="dot dot-amber"></span>31-60 دقيقة (تأخير متوسط)</span>
+          <span><span class="dot dot-red"></span>أكثر من 60 دقيقة (تأخير حرج)</span>
+        </div>
+        <div>نظام ER Waiting Time Management - تقرير معتمد رسمي</div>
+      </div>
+
+      <div class="footer-signatures">
+        <div class="sig-block">
+          <div>مسؤول تسجيل الطوارئ</div>
+          <div class="sig-line">التوقيع / الختم</div>
+        </div>
+        <div class="sig-block">
+          <div>مشرف التمريض المناوب</div>
+          <div class="sig-line">التوقيع / الختم</div>
+        </div>
+        <div class="sig-block">
+          <div>استشاري / مدير قسم الطوارئ</div>
+          <div class="sig-line">الاعتماد النهائي</div>
+        </div>
+      </div>
     </div>
   </body>
   </html>`;
 
   const win = window.open('', '_blank');
   if (win) {
+    win.document.open();
     win.document.write(html);
     win.document.close();
     setTimeout(() => {
       win.focus();
       win.print();
-    }, 400);
+    }, 450);
   }
 }

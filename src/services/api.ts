@@ -66,14 +66,22 @@ export async function safeFetchJson<T>(
 
       return JSON.parse(text) as T;
     } catch (err: any) {
-      lastError = err;
+      if (err instanceof Error) {
+        lastError = err;
+      } else if (typeof err === 'string') {
+        lastError = new Error(err);
+      } else if (typeof err === 'object' && err !== null) {
+        lastError = new Error(err.message || JSON.stringify(err));
+      } else {
+        lastError = new Error('Unknown connection failure');
+      }
       if (attempt < retries - 1) {
         await new Promise(r => setTimeout(r, baseDelay * (attempt + 1)));
       }
     }
   }
 
-  throw lastError || new Error(`Network failure communicating with ${url}`);
+  throw lastError instanceof Error ? lastError : new Error(`Network failure communicating with ${url}`);
 }
 
 async function safeMutationJson<T>(url: string, options: RequestInit): Promise<T> {
@@ -130,7 +138,7 @@ export async function fetchRecordsFromDb(): Promise<ERRecord[]> {
     }
     return records;
   } catch (err: any) {
-    console.warn('fetchRecordsFromDb using cached records due to:', err.message || err);
+    console.warn('fetchRecordsFromDb fallback due to:', err?.message || err);
     try {
       const cached = localStorage.getItem('cached_records');
       if (cached) {
@@ -140,7 +148,8 @@ export async function fetchRecordsFromDb(): Promise<ERRecord[]> {
     } catch (e) {
       // ignore
     }
-    throw err;
+    const errText = typeof err === 'string' ? err : (err?.message || (typeof err === 'object' ? JSON.stringify(err) : 'Network error'));
+    throw new Error(errText);
   }
 }
 

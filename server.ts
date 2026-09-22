@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
 import pg from 'pg';
@@ -15,17 +15,44 @@ const NEON_CONNECTION_STRING =
   process.env.DATABASE_URL ||
   'postgresql://neondb_owner:npg_e6SrKQ5DEOto@ep-soft-cloud-aiz54vee-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
 
+const isServerless = process.env.VERCEL === '1' || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
+
 const pool = new Pool({
   connectionString: NEON_CONNECTION_STRING,
   ssl: { rejectUnauthorized: false },
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  max: isServerless ? 3 : 20,
+  idleTimeoutMillis: 15000,
+  connectionTimeoutMillis: 8000,
 });
 
 // JSON body parsing with large payload support for HIS bulk imports
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Middleware to ensure database schema is initialized on first request (handles Vercel serverless cold-starts)
+let dbInitPromise: Promise<void> | null = null;
+function ensureDbInitialized(): Promise<void> {
+  if (!dbInitPromise) {
+    dbInitPromise = initDatabase().catch(err => {
+      console.error('Error initializing database:', err);
+      // Reset so future requests can retry if it was a transient network error
+      dbInitPromise = null;
+      throw err;
+    });
+  }
+  return dbInitPromise;
+}
+
+app.use(async (req: Request, res: Response, next: NextFunction) => {
+  if (req.path.startsWith('/api/') && req.path !== '/api/health') {
+    try {
+      await ensureDbInitialized();
+    } catch (err) {
+      console.warn('Database initialization warning during request:', err);
+    }
+  }
+  next();
+});
 
 // Initial database schema setup
 async function initDatabase() {
@@ -1619,6 +1646,11 @@ app.all('/api/*', (req: Request, res: Response) => {
 // START SERVER & VITE INTEGRATION
 // ==========================================
 async function startServer() {
+  if (process.env.VERCEL === '1') {
+    // Under Vercel serverless functions, database and API endpoints are served directly by the exported app
+    return;
+  }
+
   try {
     await initDatabase();
   } catch (err) {
@@ -1645,3 +1677,5 @@ async function startServer() {
 }
 
 startServer();
+
+export default app;

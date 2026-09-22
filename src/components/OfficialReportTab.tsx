@@ -457,7 +457,7 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
   return (
     <div className="space-y-4">
       {/* Control & Filter Toolbar */}
-      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-3">
+      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-3 no-print">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="p-2 rounded-xl bg-blue-100 text-blue-700">
@@ -522,7 +522,13 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
 
             <button
               id="print-pdf-btn"
-              onClick={() => printOfficialReport(filteredRecords)}
+              onClick={() =>
+                printOfficialReport(filteredRecords, {
+                  columns: cols,
+                  reportTitle: 'النموذج الرسمي المعتمد لأوقات انتظار الطوارئ',
+                  hospitalName: 'مستشفى الطوارئ والحالات الحرجة',
+                })
+              }
               className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
               title="طباعة تقرير معتمد أو حفظ كـ PDF"
             >
@@ -610,7 +616,7 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
 
       {/* Hidden Rows / Active Rules Notification */}
       {hiddenRowIds.length > 0 && (
-        <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs flex items-center justify-between text-rose-900 shadow-2xs">
+        <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs flex items-center justify-between text-rose-900 shadow-2xs no-print">
           <div className="flex items-center gap-2">
             <EyeOff className="w-4 h-4 text-rose-600" />
             <span>
@@ -627,7 +633,7 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
       )}
 
       {/* Notice Banner */}
-      <div className="bg-amber-50 border-r-4 border-amber-500 p-3 rounded-xl text-xs text-amber-900 font-medium flex flex-wrap items-center justify-between gap-2">
+      <div className="bg-amber-50 border-r-4 border-amber-500 p-3 rounded-xl text-xs text-amber-900 font-medium flex flex-wrap items-center justify-between gap-2 no-print">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
           <span>

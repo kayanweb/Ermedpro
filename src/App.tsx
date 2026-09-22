@@ -117,10 +117,22 @@ export default function App() {
       console.error('Neon DB fetch error:', err);
       setDbConnected(false);
       if (!isSilent) {
+        let errorMsg = 'تعذر الوصول إلى الخادم';
+        if (typeof err === 'string') {
+          errorMsg = err;
+        } else if (err?.message && typeof err.message === 'string') {
+          errorMsg = err.message;
+        } else if (typeof err === 'object') {
+          try {
+            errorMsg = JSON.stringify(err);
+          } catch {
+            errorMsg = 'خطأ اتصال غير معروف';
+          }
+        }
         addToast(
           lang === 'ar'
-            ? `تعذر الاتصال بقاعدة بيانات Neon السحابية: ${err.message}`
-            : `Failed to connect to Neon Cloud DB: ${err.message}`,
+            ? `تعذر الاتصال بقاعدة بيانات Neon السحابية: ${errorMsg}`
+            : `Failed to connect to Neon Cloud DB: ${errorMsg}`,
           'error'
         );
       }
@@ -425,32 +437,36 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white pb-12">
       {/* Header Bar */}
-      <Header
-        currentUser={currentUser}
-        onLogout={handleLogout}
-        records={records}
-        dbConnected={dbConnected}
-        dbLatency={dbLatency}
-        isSyncing={isSyncing}
-        onRefresh={() => loadDataFromNeon(false)}
-        onOpenAuditLog={() => setShowAuditModal(true)}
-        lang={lang}
-        onToggleLang={toggleLanguage}
-      />
+      <div className="no-print">
+        <Header
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          records={records}
+          dbConnected={dbConnected}
+          dbLatency={dbLatency}
+          isSyncing={isSyncing}
+          onRefresh={() => loadDataFromNeon(false)}
+          onOpenAuditLog={() => setShowAuditModal(true)}
+          lang={lang}
+          onToggleLang={toggleLanguage}
+        />
+      </div>
 
       {/* Navigation Tabs Bar */}
-      <TabsNav
-        activeTab={activeTab}
-        onTabChange={tab => {
-          setActiveTab(tab);
-          if (tab !== 'report') setDeptFilterFromDash('');
-        }}
-        userRole={currentUser.role}
-        pendingCount={pendingCount}
-        criticalCount={criticalCount}
-        availableBedsCount={availableBedsCount}
-        lang={lang}
-      />
+      <div className="no-print">
+        <TabsNav
+          activeTab={activeTab}
+          onTabChange={tab => {
+            setActiveTab(tab);
+            if (tab !== 'report') setDeptFilterFromDash('');
+          }}
+          userRole={currentUser.role}
+          pendingCount={pendingCount}
+          criticalCount={criticalCount}
+          availableBedsCount={availableBedsCount}
+          lang={lang}
+        />
+      </div>
 
       {/* Main Container */}
       <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 pt-6 flex-1">

@@ -7,20 +7,58 @@
 }
 
 @media print {
-  .no-print {
+  .no-print,
+  nav,
+  header,
+  button,
+  input[type="text"],
+  input[type="date"],
+  select {
     display: none !important;
   }
-  body {
-    background: white !important;
-    color: black !important;
-    padding: 0 !important;
+
+  @page {
+    size: A4 landscape;
+    margin: 5mm;
   }
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 8pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  main {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
   .print-container {
     box-shadow: none !important;
-    border: none !important;
+    border: 2px solid #000000 !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+  }
+
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+  }
+
+  thead {
+    display: table-header-group !important;
   }
 }

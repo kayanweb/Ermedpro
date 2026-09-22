@@ -1,34 +1,30 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { USERS } from '../constants';
-import { ShieldCheck, UserCheck, Stethoscope, Eye, AlertCircle } from 'lucide-react';
+import { AlertCircle, Shield, MessageCircle } from 'lucide-react';
 
 interface LoginScreenProps {
   onLogin: (user: User) => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
-  const [username, setUsername] = useState('1');
-  const [password, setPassword] = useState('1');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const handleLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setError('');
 
-    const found = USERS.find(u => u.username.toLowerCase() === username.trim().toLowerCase() && u.password === password);
+    const found = USERS.find(
+      u => u.username.toLowerCase() === username.trim().toLowerCase() && u.password === password
+    );
     if (!found) {
       setError('اسم المستخدم أو كلمة المرور غير صحيحة');
       return;
     }
 
     onLogin(found);
-  };
-
-  const handleQuickSelect = (u: User) => {
-    setUsername(u.username);
-    setPassword(u.password || '');
-    setError('');
   };
 
   return (
@@ -87,34 +83,33 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-slate-100">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 text-center">
-              حسابات تجريبية سريعة بنقرة واحدة:
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {USERS.map(u => (
-                <button
-                  key={u.username}
-                  type="button"
-                  onClick={() => handleQuickSelect(u)}
-                  className={`p-2.5 text-right rounded-lg border text-xs transition flex items-center gap-2 ${
-                    username === u.username
-                      ? 'border-blue-500 bg-blue-50 text-blue-900 font-bold ring-1 ring-blue-500'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-700'
-                  }`}
+          {/* Secure Developer Signature & Contact */}
+          <div className="mt-8 pt-6 border-t border-slate-200 text-center space-y-3">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-semibold">
+              <Shield className="w-3.5 h-3.5 text-blue-600" />
+              <span>نظام محمي ومشفر بالكامل</span>
+            </div>
+
+            <div className="bg-gradient-to-r from-slate-50 via-blue-50 to-slate-50 p-4 rounded-xl border border-blue-100 shadow-2xs">
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+                BY :
+              </div>
+              <div className="text-base font-black text-slate-900 tracking-wide font-sans">
+                MOHAMED ELSAYED ABD ALLAH
+              </div>
+
+              <div className="mt-2.5 pt-2.5 border-t border-blue-200/60 flex items-center justify-center gap-2">
+                <a
+                  href="https://wa.me/201121499017"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs hover:shadow-md cursor-pointer"
+                  title="تواصل عبر واتساب"
                 >
-                  <div className="shrink-0 p-1.5 rounded-md bg-white shadow-xs border border-slate-100">
-                    {u.role === 'Admin' && <ShieldCheck className="w-3.5 h-3.5 text-red-600" />}
-                    {u.role === 'Doctor' && <Stethoscope className="w-3.5 h-3.5 text-blue-600" />}
-                    {u.role === 'Nurse' && <UserCheck className="w-3.5 h-3.5 text-emerald-600" />}
-                    {u.role === 'Viewer' && <Eye className="w-3.5 h-3.5 text-amber-600" />}
-                  </div>
-                  <div className="truncate">
-                    <div className="font-semibold truncate">{u.name}</div>
-                    <div className="text-[10px] text-slate-500">{u.role}</div>
-                  </div>
-                </button>
-              ))}
+                  <MessageCircle className="w-4 h-4 text-emerald-100" />
+                  <span className="font-sans font-bold tracking-wider" dir="ltr">01121499017</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>

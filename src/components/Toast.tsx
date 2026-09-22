@@ -32,7 +32,13 @@ export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
             {t.type === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />}
             {t.type === 'error' && <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />}
             {t.type === 'info' && <Info className="w-4 h-4 shrink-0 text-blue-400" />}
-            <span>{t.text}</span>
+            <span>
+              {typeof t.text === 'string'
+                ? t.text
+                : typeof t.text === 'object'
+                ? JSON.stringify(t.text)
+                : String(t.text)}
+            </span>
           </div>
 
           <button
