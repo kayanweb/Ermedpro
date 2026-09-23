@@ -29,30 +29,8 @@ const pool = new Pool({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Middleware to ensure database schema is initialized on first request (handles Vercel serverless cold-starts)
-let dbInitPromise: Promise<void> | null = null;
-function ensureDbInitialized(): Promise<void> {
-  if (!dbInitPromise) {
-    dbInitPromise = initDatabase().catch(err => {
-      console.error('Error initializing database:', err);
-      // Reset so future requests can retry if it was a transient network error
-      dbInitPromise = null;
-      throw err;
-    });
-  }
-  return dbInitPromise;
-}
-
-app.use(async (req: Request, res: Response, next: NextFunction) => {
-  if (req.path.startsWith('/api/') && req.path !== '/api/health') {
-    try {
-      await ensureDbInitialized();
-    } catch (err) {
-      console.warn('Database initialization warning during request:', err);
-    }
-  }
-  next();
-});
+// REMOVED blocking initDatabase middleware per architectural requirement.
+// Neon PostgreSQL tables and schema are pre-provisioned. APIs execute queries directly.
 
 // Initial database schema setup
 async function initDatabase() {
