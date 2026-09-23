@@ -22,6 +22,7 @@ import { ToastContainer, ToastMessage } from './components/Toast';
 import { soundService } from './services/sound';
 import { DELAY_REASONS } from './constants';
 import { t } from './utils/translations';
+import { formatErrorMessage } from './utils/errorUtils';
 import {
   fetchRecordsFromDb,
   createRecordInDb,
@@ -117,18 +118,7 @@ export default function App() {
       console.error('Neon DB fetch error:', err);
       setDbConnected(false);
       if (!isSilent) {
-        let errorMsg = 'تعذر الوصول إلى الخادم';
-        if (typeof err === 'string') {
-          errorMsg = err;
-        } else if (err instanceof Error) {
-          errorMsg = err.message || err.toString();
-        } else if (err?.message && typeof err.message === 'string') {
-          errorMsg = err.message;
-        } else if (typeof err === 'object' && err !== null) {
-          errorMsg = err.message || (typeof err.toString === 'function' && err.toString() !== '[object Object]' ? err.toString() : 'خطأ اتصال بالشبكة');
-        } else {
-          errorMsg = String(err);
-        }
+        const errorMsg = formatErrorMessage(err, 'تعذر الوصول إلى الخادم');
         addToast(
           lang === 'ar'
             ? `تعذر الاتصال بقاعدة بيانات Neon السحابية: ${errorMsg}`
@@ -248,7 +238,7 @@ export default function App() {
     } catch (err: any) {
       console.error('Import error:', err);
       soundService.playWarning();
-      addToast(`فشل الاستيراد في Neon: ${err.message}`, 'error');
+      addToast(`فشل الاستيراد في Neon: ${formatErrorMessage(err)}`, 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -269,7 +259,7 @@ export default function App() {
     } catch (err: any) {
       console.error('Update error:', err);
       setRecords(previous);
-      addToast(`فشل التحديث في Neon: ${err.message}`, 'error');
+      addToast(`فشل التحديث في Neon: ${formatErrorMessage(err)}`, 'error');
     }
   };
 
@@ -283,7 +273,7 @@ export default function App() {
     } catch (err: any) {
       console.error('Delete error:', err);
       setRecords(previous);
-      addToast(`فشل الحذف: ${err.message}`, 'error');
+      addToast(`فشل الحذف: ${formatErrorMessage(err)}`, 'error');
     }
   };
 
@@ -297,7 +287,7 @@ export default function App() {
     } catch (err: any) {
       console.error('Clear error:', err);
       setRecords(previous);
-      addToast(`فشل تفريغ السجلات: ${err.message}`, 'error');
+      addToast(`فشل تفريغ السجلات: ${formatErrorMessage(err)}`, 'error');
     }
   };
 
@@ -315,7 +305,7 @@ export default function App() {
       );
     } catch (err: any) {
       console.error('Reset error:', err);
-      addToast(`فشل استعادة العينات: ${err.message}`, 'error');
+      addToast(`فشل استعادة العينات: ${formatErrorMessage(err)}`, 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -336,7 +326,7 @@ export default function App() {
       setActiveTab('report');
     } catch (err: any) {
       console.error('Restore error:', err);
-      addToast(`فشل استعادة النسخة الاحتياطية: ${err.message}`, 'error');
+      addToast(`فشل استعادة النسخة الاحتياطية: ${formatErrorMessage(err)}`, 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -351,7 +341,7 @@ export default function App() {
       addToast(lang === 'ar' ? 'تم تحديث حالة السرير في Neon' : 'Updated bed status in Neon', 'success');
     } catch (err: any) {
       console.error('Bed update error:', err);
-      addToast(`فشل تحديث السرير: ${err.message}`, 'error');
+      addToast(`فشل تحديث السرير: ${formatErrorMessage(err)}`, 'error');
     }
   };
 
@@ -368,7 +358,7 @@ export default function App() {
       );
     } catch (err: any) {
       console.error('Assign bed error:', err);
-      addToast(`فشل تخصيص السرير: ${err.message}`, 'error');
+      addToast(`فشل تخصيص السرير: ${formatErrorMessage(err)}`, 'error');
     }
   };
 
@@ -404,7 +394,7 @@ export default function App() {
       setQuickTransferRecord(null);
     } catch (err: any) {
       console.error('Complete transfer error:', err);
-      addToast(`فشل إتمام النقل: ${err.message}`, 'error');
+      addToast(`فشل إتمام النقل: ${formatErrorMessage(err)}`, 'error');
     } finally {
       setIsSubmittingTransfer(false);
     }

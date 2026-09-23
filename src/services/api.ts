@@ -1,4 +1,5 @@
 import { ERRecord, User, HospitalBed, AuditLogItem, UserAuditStat, CaseComment, LoginLog } from '../types';
+import { formatErrorMessage } from '../utils/errorUtils';
 
 export interface DbHealthStatus {
   status: string;
@@ -85,14 +86,19 @@ export async function safeFetchJson<T>(
 }
 
 async function safeMutationJson<T>(url: string, options: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      ...(options.headers || {}),
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...(options.headers || {}),
+      },
+    });
+  } catch (netErr: any) {
+    throw new Error(formatErrorMessage(netErr, `تعذر الاتصال بالخادم على ${url}`));
+  }
 
   const contentType = res.headers.get('content-type') || '';
   if (contentType.toLowerCase().includes('text/html')) {
@@ -104,9 +110,22 @@ async function safeMutationJson<T>(url: string, options: RequestInit): Promise<T
     throw new Error(`Invalid JSON response received from ${url}`);
   }
 
-  const data = JSON.parse(text);
+  let data: any;
+  try {
+    data = JSON.parse(text);
+  } catch (parseErr: any) {
+    throw new Error(`خطأ في تحليل استجابة الخادم: ${text.slice(0, 100)}`);
+  }
+
   if (!res.ok) {
-    throw new Error(data.error || `HTTP error ${res.status}`);
+    const extracted = typeof data?.error === 'string'
+      ? data.error
+      : typeof data?.message === 'string'
+      ? data.message
+      : typeof data === 'string'
+      ? data
+      : JSON.stringify(data);
+    throw new Error(extracted || `HTTP error ${res.status}`);
   }
   return data as T;
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { DepartmentType, ERRecord } from '../types';
 import { REASONS, DEPARTMENTS, CONTRACT_TYPES, CAME_FROM_OPTIONS, SAMPLE_HIS_DATA, SAMPLE_SIMPLE_DATA } from '../constants';
 import { parseFullDateTime, toLocalDatetimeInput, calcMinutesDiff, fmtDateTime } from '../utils/dateTime';
+import { formatErrorMessage } from '../utils/errorUtils';
 import {
   UploadCloud,
   CheckCircle,
@@ -495,8 +496,10 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
       contract: c.contract || defaultContract || 'طوارئ المستشفى',
       cameFrom: c.cameFrom || 'من المنزل',
       visitNo: c.visitNo || undefined,
+      registrationType: c.registrationType || 'Emergency',
       doctorName: c.doctorName || currentUserName,
       diagnosis: c.diagnosis || undefined,
+      entryMethod: 'Import',
       recordedBy: currentUserName,
       recordedAt: new Date().toISOString(),
     }));

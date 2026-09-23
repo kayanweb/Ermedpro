@@ -11,18 +11,29 @@ const app = express();
 const PORT = 3000;
 
 // Neon PostgreSQL Connection Pool
-const NEON_CONNECTION_STRING =
+const rawConnectionString =
   process.env.DATABASE_URL ||
   'postgresql://neondb_owner:npg_e6SrKQ5DEOto@ep-soft-cloud-aiz54vee-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
 
-const isServerless = process.env.VERCEL === '1' || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
+const NEON_CONNECTION_STRING = rawConnectionString
+  .trim()
+  .replace(/^["'`]/, '')
+  .replace(/["'`]$/, '')
+  .trim();
+
+const isServerless =
+  process.env.VERCEL === '1' ||
+  Boolean(process.env.VERCEL) ||
+  Boolean(process.env.VERCEL_ENV) ||
+  Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
+  Boolean(process.env.NOW_REGION);
 
 const pool = new Pool({
   connectionString: NEON_CONNECTION_STRING,
   ssl: { rejectUnauthorized: false },
   max: isServerless ? 3 : 20,
   idleTimeoutMillis: 15000,
-  connectionTimeoutMillis: 8000,
+  connectionTimeoutMillis: 10000,
 });
 
 // JSON body parsing with large payload support for HIS bulk imports
@@ -1653,7 +1664,13 @@ app.all('/api/*', (req: Request, res: Response) => {
 // START SERVER & VITE INTEGRATION
 // ==========================================
 async function startServer() {
-  if (process.env.VERCEL === '1') {
+  if (
+    process.env.VERCEL === '1' ||
+    Boolean(process.env.VERCEL) ||
+    Boolean(process.env.VERCEL_ENV) ||
+    Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
+    Boolean(process.env.NOW_REGION)
+  ) {
     // Under Vercel serverless functions, database and API endpoints are served directly by the exported app
     return;
   }
