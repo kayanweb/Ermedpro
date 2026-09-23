@@ -360,15 +360,29 @@ function mapRowToRecord(row: any) {
 app.get('/api/health', async (req: Request, res: Response) => {
   try {
     const start = Date.now();
-    const result = await pool.query('SELECT COUNT(*) as count, NOW() as server_time FROM er_records');
+    // Test basic connectivity first
+    await pool.query('SELECT 1');
+    
+    // Check if table exists and count
+    let recordCount = 0;
+    let serverTime = new Date().toISOString();
+    try {
+      const result = await pool.query('SELECT COUNT(*) as count, NOW() as server_time FROM er_records');
+      recordCount = parseInt(result.rows[0].count, 10);
+      serverTime = result.rows[0].server_time;
+    } catch {
+      // table might not be created yet, trigger async init
+      ensureDbInitializedAsync();
+    }
+
     const latency = Date.now() - start;
     res.json({
       status: 'ok',
       db: 'Neon PostgreSQL',
       connected: true,
       latencyMs: latency,
-      recordCount: parseInt(result.rows[0].count, 10),
-      serverTime: result.rows[0].server_time,
+      recordCount,
+      serverTime,
     });
   } catch (err: any) {
     res.status(500).json({
