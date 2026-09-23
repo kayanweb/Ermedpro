@@ -29,8 +29,23 @@ const pool = new Pool({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// REMOVED blocking initDatabase middleware per architectural requirement.
-// Neon PostgreSQL tables and schema are pre-provisioned. APIs execute queries directly.
+// Background non-blocking database initialization (ensures tables are created on Neon automatically without blocking API requests)
+let dbInitStarted = false;
+function ensureDbInitializedAsync() {
+  if (dbInitStarted) return;
+  dbInitStarted = true;
+  initDatabase().catch(err => {
+    console.error('Background database initialization warning:', err);
+    dbInitStarted = false; // allow retry if failed
+  });
+}
+
+app.use(async (req: Request, res: Response, next: NextFunction) => {
+  if (req.path.startsWith('/api/') && req.path !== '/api/health') {
+    ensureDbInitializedAsync();
+  }
+  next();
+});
 
 // Initial database schema setup
 async function initDatabase() {
