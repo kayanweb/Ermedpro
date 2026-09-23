@@ -120,14 +120,14 @@ export default function App() {
         let errorMsg = 'تعذر الوصول إلى الخادم';
         if (typeof err === 'string') {
           errorMsg = err;
+        } else if (err instanceof Error) {
+          errorMsg = err.message || err.toString();
         } else if (err?.message && typeof err.message === 'string') {
           errorMsg = err.message;
-        } else if (typeof err === 'object') {
-          try {
-            errorMsg = JSON.stringify(err);
-          } catch {
-            errorMsg = 'خطأ اتصال غير معروف';
-          }
+        } else if (typeof err === 'object' && err !== null) {
+          errorMsg = err.message || (typeof err.toString === 'function' && err.toString() !== '[object Object]' ? err.toString() : 'خطأ اتصال بالشبكة');
+        } else {
+          errorMsg = String(err);
         }
         addToast(
           lang === 'ar'

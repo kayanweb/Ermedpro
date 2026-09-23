@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, ERRecord, AppLanguage } from '../types';
 import { t } from '../utils/translations';
+import { soundService } from '../services/sound';
 import {
   LogOut,
   Activity,
@@ -10,6 +11,8 @@ import {
   RefreshCw,
   History,
   Languages,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -99,34 +102,62 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
             <Database className="w-3.5 h-3.5 text-emerald-400" />
             <span className="font-semibold font-sans">
-              {dbConnected ? 'Neon DB' : 'Reconnecting...'}
+              {dbConnected ? (lang === 'ar' ? 'قاعدة البيانات متصلة' : 'Neon DB') : (lang === 'ar' ? 'غير متصل' : 'Disconnected')}
             </span>
             {dbLatency !== undefined && (
               <span className="text-[10px] opacity-75">({dbLatency}ms)</span>
             )}
+            
+            {/* Dedicated Reconnect / Manual Health Check Verification Button */}
             {onRefresh && (
               <button
                 type="button"
                 onClick={onRefresh}
-                title="مزامنة فورية مع Neon"
-                className="ms-1 p-0.5 text-slate-300 hover:text-white transition cursor-pointer"
+                disabled={isSyncing}
+                title={lang === 'ar' ? 'إعادة الاتصال وفحص حالة قاعدة البيانات' : 'Reconnect & Verify Database Health'}
+                className={`ms-1.5 flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold transition cursor-pointer shadow-sm ${
+                  dbConnected
+                    ? 'bg-emerald-900/80 hover:bg-emerald-800 text-emerald-200 border border-emerald-700'
+                    : 'bg-rose-600 hover:bg-rose-500 text-white animate-pulse'
+                }`}
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-emerald-400' : ''}`} />
+                <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span>{lang === 'ar' ? (isSyncing ? 'جاري الاتصال...' : 'إعادة اتصال') : (isSyncing ? 'Connecting...' : 'Reconnect')}</span>
               </button>
             )}
           </div>
 
-          {/* Quick Audit Log Button */}
-          {onOpenAuditLog && (
-            <button
-              onClick={onOpenAuditLog}
-              className="flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition"
-              title={t('tabAuditLog', lang)}
-            >
-              <History className="w-3.5 h-3.5 text-indigo-400" />
-              <span>{lang === 'ar' ? 'التدقيق' : 'Audit'}</span>
-            </button>
-          )}
+          {/* Global Sound Mute/Enable Toggle Button */}
+          <button
+            type="button"
+            onClick={() => {
+              const current = soundService.isEnabled();
+              const next = !current;
+              soundService.setEnabled(next);
+              if (next) soundService.playChime();
+              // Force re-render or trigger custom event if needed, or update state
+              const btn = document.getElementById('global-sound-toggle-btn');
+              if (btn) {
+                btn.setAttribute('data-sound', String(next));
+              }
+              window.dispatchEvent(new CustomEvent('sound-toggle', { detail: next }));
+            }}
+            id="global-sound-toggle-btn"
+            title={lang === 'ar' ? 'كتم أو تفعيل التنبيهات الصوتية' : 'Mute or Enable Sound Alerts'}
+            className="flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition cursor-pointer"
+          >
+            {soundService.isEnabled() ? (
+              <>
+                <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">{lang === 'ar' ? 'الصوت: مفعل' : 'Sound: On'}</span>
+              </>
+            ) : (
+              <>
+                <VolumeX className="w-3.5 h-3.5 text-rose-400" />
+                <span className="hidden sm:inline">{lang === 'ar' ? 'الصوت: مكتوم' : 'Sound: Muted'}</span>
+              </>
+            )}
+          </button>
 
           {/* Language Switcher */}
           <button
