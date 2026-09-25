@@ -53,7 +53,7 @@ export const AdvancedReportsTab: React.FC<AdvancedReportsTabProps> = ({ records,
   // Triage Breakdown
   const triageStats: Record<string, number> = {};
   records.forEach(r => {
-    const level = r.triageLevel || 'Level 3 - المستوى العادي';
+    const level = r.triageLevel || 'Category 3 (GREEN) - عاجل خلال 30 د (Seen within 30 mins)';
     triageStats[level] = (triageStats[level] || 0) + 1;
   });
 

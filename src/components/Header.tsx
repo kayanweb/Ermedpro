@@ -2,6 +2,7 @@ import React from 'react';
 import { User, ERRecord, AppLanguage } from '../types';
 import { t } from '../utils/translations';
 import { soundService } from '../services/sound';
+import { useInstitutionSettings } from '../utils/institutionSettings';
 import {
   LogOut,
   Activity,
@@ -40,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
   lang,
   onToggleLang,
 }) => {
+  const inst = useInstitutionSettings();
   const pendingCount = records.filter(r => r.status === 'Pending').length;
   const criticalCount = records.filter(r => r.delay && r.delay > 60).length;
 
@@ -63,19 +65,23 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-[1720px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
         {/* Brand & System Title */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-xl shadow-lg shadow-emerald-500/20 font-bold border border-emerald-400/30">
-            🏥
+          <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-xl shadow-lg shadow-emerald-500/20 font-bold border border-emerald-400/30 overflow-hidden">
+            {inst.logo.length <= 2 ? (
+              <span>{inst.logo}</span>
+            ) : (
+              <img src={inst.logo} alt="Logo" className="w-full h-full object-cover" />
+            )}
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base sm:text-lg font-bold tracking-tight text-white">
-                {t('systemTitle', lang)}
+                {inst.systemName}
               </h1>
               <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">
                 ENTERPRISE v4.0
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">{t('systemSubtitle', lang)}</p>
+            <p className="text-[11px] text-slate-400">{inst.hospitalName}</p>
           </div>
         </div>
 

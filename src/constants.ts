@@ -58,11 +58,11 @@ export const CAME_FROM_OPTIONS = [
 ];
 
 export const TRIAGE_LEVELS = [
-  { id: 'Level 1', nameAr: 'المستوى 1 - إنعاش عاجل (Resuscitation)', badgeBg: 'bg-red-600 text-white', icon: '🚨' },
-  { id: 'Level 2', nameAr: 'المستوى 2 - طوارئ حادة (Emergent)', badgeBg: 'bg-rose-500 text-white', icon: '🔴' },
-  { id: 'Level 3', nameAr: 'المستوى 3 - عاجل (Urgent)', badgeBg: 'bg-amber-500 text-white', icon: '🟡' },
-  { id: 'Level 4', nameAr: 'المستوى 4 - أقل عجلة (Less Urgent)', badgeBg: 'bg-emerald-600 text-white', icon: '🟢' },
-  { id: 'Level 5', nameAr: 'المستوى 5 - غير عاجل (Non-Urgent)', badgeBg: 'bg-blue-600 text-white', icon: '🔵' },
+  { id: 'Category 1', nameAr: 'Category 1 (RED) - إنعاش فوري (Seen immediately)', badgeBg: 'bg-red-600 text-white', icon: '🚨' },
+  { id: 'Category 2', nameAr: 'Category 2 (ORANGE) - طارئ جداً خلال 10 د (Seen within 10 mins)', badgeBg: 'bg-orange-500 text-white', icon: '🟠' },
+  { id: 'Category 3', nameAr: 'Category 3 (GREEN) - عاجل خلال 30 د (Seen within 30 mins)', badgeBg: 'bg-emerald-600 text-white', icon: '🟢' },
+  { id: 'Category 4', nameAr: 'Category 4 (BLUE) - شبه عاجل خلال 60 د (Seen within 60 mins)', badgeBg: 'bg-blue-600 text-white', icon: '🔵' },
+  { id: 'Category 5', nameAr: 'Category 5 (white) - غير عاجل خلال 120 د (Seen within 120 mins)', badgeBg: 'bg-slate-100 text-slate-800 border border-slate-300', icon: '⚪' },
 ];
 
 export const DISCHARGE_TYPES = [

@@ -227,12 +227,12 @@ export function printOfficialReport(records: ERRecord[], options?: PrintReportOp
         ${cols.showMrn ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; font-family:monospace; font-weight:600; color:#1e293b; font-size:7.5pt;">${r.medical}</td>` : ''}
         ${cols.showTriage ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; font-weight:bold; font-size:7.5pt;">
           <span style="display:inline-block; padding:1px 4px; border-radius:3px; font-size:7pt; background:${
-            r.triageLevel?.includes('Level 1') ? '#fee2e2; color:#991b1b; border:1px solid #fca5a5;' :
-            r.triageLevel?.includes('Level 2') ? '#ffedd5; color:#9a3412; border:1px solid #fdba74;' :
-            r.triageLevel?.includes('Level 4') ? '#e0f2fe; color:#075985; border:1px solid #7dd3fc;' :
-            r.triageLevel?.includes('Level 5') ? '#f1f5f9; color:#334155; border:1px solid #cbd5e1;' :
+            (r.triageLevel?.includes('Level 1') || r.triageLevel?.includes('Category 1')) ? '#fee2e2; color:#991b1b; border:1px solid #fca5a5;' :
+            (r.triageLevel?.includes('Level 2') || r.triageLevel?.includes('Category 2')) ? '#ffedd5; color:#9a3412; border:1px solid #fdba74;' :
+            (r.triageLevel?.includes('Level 4') || r.triageLevel?.includes('Category 4')) ? '#e0f2fe; color:#075985; border:1px solid #7dd3fc;' :
+            (r.triageLevel?.includes('Level 5') || r.triageLevel?.includes('Category 5')) ? '#f1f5f9; color:#334155; border:1px solid #cbd5e1;' :
             '#dcfce7; color:#166534; border:1px solid #86efac;'
-          }">${r.triageLevel || 'Level 3 - عادي'}</span>
+          }">${r.triageLevel || 'Category 3 (GREEN)'}</span>
         </td>` : ''}
         ${cols.showContract ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; font-weight:bold; color:#581c87; font-size:7.5pt;">${r.contract || 'طوارئ المستشفى'}</td>` : ''}
         ${cols.showOrderTime ? `<td style="padding:4px 2px; border:1px solid #cbd5e1; text-align:center; font-family:monospace; font-size:7.5pt; white-space:nowrap;">${fmtDateTime(r.order)}</td>` : ''}

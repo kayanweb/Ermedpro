@@ -24,7 +24,7 @@ export const RecordEditModal: React.FC<RecordEditModalProps> = ({ record, onClos
   const [visitNo, setVisitNo] = useState<string>(record.visitNo || '');
   const [doctorName, setDoctorName] = useState<string>(record.doctorName || '');
   const [diagnosis, setDiagnosis] = useState<string>(record.diagnosis || '');
-  const [triageLevel, setTriageLevel] = useState<string>(record.triageLevel || 'Level 3 - المستوى العادي');
+  const [triageLevel, setTriageLevel] = useState<string>(record.triageLevel || 'Category 3 (GREEN) - عاجل خلال 30 د (Seen within 30 mins)');
   const [dischargeType, setDischargeType] = useState<string>(record.dischargeType || '');
   const [entryMethod, setEntryMethod] = useState<'Manual' | 'Imported'>(record.entryMethod === 'Imported' ? 'Imported' : 'Manual');
   const [orderTime, setOrderTime] = useState(record.order);

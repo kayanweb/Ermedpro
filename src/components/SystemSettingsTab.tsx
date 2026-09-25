@@ -3,6 +3,7 @@ import { ERRecord, User, AppLanguage, ScreensVisibilityConfig } from '../types';
 import { TRIAGE_LEVELS, DISCHARGE_TYPES, DEPARTMENTS, CONTRACT_TYPES, REASONS } from '../constants';
 import { getScreensVisibility, saveScreensVisibility, SCREENS_CHANGE_EVENT } from '../utils/screensConfig';
 import { UserManagementTab } from './UserManagementTab';
+import { useInstitutionSettings, saveInstitutionSettings } from '../utils/institutionSettings';
 import {
   Settings,
   Eye,
@@ -45,7 +46,45 @@ export const SystemSettingsTab: React.FC<SystemSettingsTabProps> = ({
   lang = 'ar',
   currentUser = null,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'screensManager' | 'columns' | 'rowFilters' | 'rowsManager' | 'quickAddRows' | 'cyclesInfo' | 'usersManager'>('screensManager');
+  const [activeSubTab, setActiveSubTab] = useState<'institutionProfile' | 'screensManager' | 'columns' | 'rowFilters' | 'rowsManager' | 'quickAddRows' | 'cyclesInfo' | 'usersManager'>('institutionProfile');
+
+  const inst = useInstitutionSettings();
+  const [instName, setInstName] = useState(inst.systemName);
+  const [hospName, setHospName] = useState(inst.hospitalName);
+  const [logoVal, setLogoVal] = useState(inst.logo);
+  const [subTitleVal, setSubTitleVal] = useState(inst.subTitle);
+
+  useEffect(() => {
+    setInstName(inst.systemName);
+    setHospName(inst.hospitalName);
+    setLogoVal(inst.logo);
+    setSubTitleVal(inst.subTitle);
+  }, [inst]);
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveInstitutionSettings({
+      systemName: instName,
+      hospitalName: hospName,
+      logo: logoVal,
+      subTitle: subTitleVal,
+    });
+    setSuccessMsg('تم حفظ وتحديث الملف التعريفي والبيانات بنجاح وتطبيقها على مستوى النظام والواتساب والطباعة!');
+    setTimeout(() => setSuccessMsg(''), 4000);
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setLogoVal(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Screens visibility config (persisted in localStorage and synchronized with event)
   const [screensConfig, setScreensConfig] = useState<ScreensVisibilityConfig>(getScreensVisibility);
@@ -137,7 +176,7 @@ export const SystemSettingsTab: React.FC<SystemSettingsTabProps> = ({
   const [newContract, setNewContract] = useState('طوارئ المستشفى');
   const [isCustomNewContract, setIsCustomNewContract] = useState(false);
   const [customNewContract, setCustomNewContract] = useState('');
-  const [newTriage, setNewTriage] = useState('Level 3 - المستوى العادي');
+  const [newTriage, setNewTriage] = useState('Category 3 (GREEN) - عاجل خلال 30 د (Seen within 30 mins)');
   const [newDischarge, setNewDischarge] = useState('');
   const [newBedNumber, setNewBedNumber] = useState('');
   const [newNotes, setNewNotes] = useState('');
@@ -245,6 +284,19 @@ export const SystemSettingsTab: React.FC<SystemSettingsTabProps> = ({
 
           <div className="flex flex-wrap items-center gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700 text-xs">
             <button
+              onClick={() => setActiveSubTab('institutionProfile')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeSubTab === 'institutionProfile' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>اسم وشعار المؤسسة</span>
+              <span className="bg-indigo-900 text-white font-bold px-1.5 py-0.2 rounded-full text-[10px]">
+                مخصصة
+              </span>
+            </button>
+
+            <button
               onClick={() => setActiveSubTab('screensManager')}
               className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${
                 activeSubTab === 'screensManager' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-300 hover:text-white'
@@ -332,6 +384,114 @@ export const SystemSettingsTab: React.FC<SystemSettingsTabProps> = ({
         <div className="p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
           <span>{successMsg}</span>
+        </div>
+      )}
+
+      {/* Sub Tab: Institution & System Profile Settings */}
+      {activeSubTab === 'institutionProfile' && (
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-6">
+          <div className="border-b border-slate-100 pb-4">
+            <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              <span>تخصيص هوية وشعار المنشأة الطبية (Institution & System Identity)</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              قم بتعديل وتخصيص مظهر وشعار النظام، اسم المستشفى والترويسة لتعكس هويتك الخاصة. سيتم تطبيق هذه التغييرات تلقائياً في كامل شاشات النظام، رسائل المشاركة على واتساب، والتقارير المطبوعة والمصدرة للـ PDF.
+            </p>
+          </div>
+
+          <form onSubmit={handleSaveProfile} className="space-y-5 text-xs max-w-2xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">اسم النظام الرئيسي (System Name)</label>
+                <input
+                  type="text"
+                  value={instName}
+                  onChange={e => setInstName(e.target.value)}
+                  placeholder="مثال: ER Waiting Time"
+                  required
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">اسم المستشفى / المؤسسة (Hospital Name)</label>
+                <input
+                  type="text"
+                  value={hospName}
+                  onChange={e => setHospName(e.target.value)}
+                  placeholder="مثال: مستشفى الطوارئ والحالات الحرجة"
+                  required
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 font-semibold"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">شعار المنشأة (Logo setup)</label>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 p-4 border border-slate-200 bg-slate-50/50 rounded-xl">
+                {/* Logo Preview */}
+                <div className="w-16 h-16 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-3xl shadow-md border border-emerald-400/20 overflow-hidden shrink-0 self-center">
+                  {logoVal.length <= 2 ? (
+                    <span>{logoVal}</span>
+                  ) : (
+                    <img src={logoVal} alt="Logo" className="w-full h-full object-cover" />
+                  )}
+                </div>
+
+                <div className="space-y-3 flex-1">
+                  <div>
+                    <span className="block font-bold text-slate-700 mb-1.5">اختر رمز تعبيري سريع (Quick Emoji):</span>
+                    <div className="flex items-center gap-2">
+                      {['🏥', '🩺', '🚑', '🏢', '🧪', '🩸', '🧬', '❤️'].map(em => (
+                        <button
+                          key={em}
+                          type="button"
+                          onClick={() => setLogoVal(em)}
+                          className={`w-8 h-8 rounded-lg border text-lg flex items-center justify-center transition cursor-pointer hover:bg-white hover:scale-105 ${
+                            logoVal === em ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500/20' : 'bg-slate-100 border-slate-200'
+                          }`}
+                        >
+                          {em}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-200">
+                    <span className="block font-bold text-slate-700 mb-1">أو ارفع شعار المنشأة الخاص بك (مستحسن):</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="block w-full text-xs text-slate-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">شرح النظام / التوصيف الفرعي (Slogan / Subtitle)</label>
+              <input
+                type="text"
+                value={subTitleVal}
+                onChange={e => setSubTitleVal(e.target.value)}
+                placeholder="مثال: نظام قياس وإدارة أوقات انتظار الطوارئ"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 font-semibold"
+              />
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold flex items-center gap-2 transition cursor-pointer shadow-sm hover:shadow active:scale-95"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>حفظ الهوية وتطبيق التغييرات فورا 🚀</span>
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -962,7 +1122,7 @@ export const SystemSettingsTab: React.FC<SystemSettingsTabProps> = ({
                 الضغط المتكرر على شارة الفرز في الجدول يبدّل المستوى دورياً بين:
                 <br />
                 <span className="font-semibold font-mono text-[11px] block mt-1">
-                  Level 1 (إنعاش) ➜ Level 2 (حرج) ➜ Level 3 (عادي) ➜ Level 4 ➜ Level 5
+                  Category 1 (RED) ➜ Category 2 (ORANGE) ➜ Category 3 (GREEN) ➜ Category 4 (BLUE) ➜ Category 5 (white)
                 </span>
               </p>
             </div>

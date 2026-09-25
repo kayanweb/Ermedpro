@@ -4,6 +4,7 @@ import { REASONS, DEPARTMENTS, TRIAGE_LEVELS, CONTRACT_TYPES, DISCHARGE_TYPES } 
 import { fmtDate, fmtDateTime } from '../utils/dateTime';
 import { exportToExcel, exportToCSV, printOfficialReport } from '../utils/export';
 import { RecordEditModal } from './RecordEditModal';
+import { getInstitutionSettings, useInstitutionSettings } from '../utils/institutionSettings';
 import {
   Search,
   Filter,
@@ -67,6 +68,7 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
   initialDeptFilter = '',
   onOpenQR,
 }) => {
+  const inst = useInstitutionSettings();
   const [searchTerm, setSearchTerm] = useState('');
   const [deptFilter, setDeptFilter] = useState(initialDeptFilter);
   const [dateFilter, setDateFilter] = useState('');
@@ -97,7 +99,7 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
   const [newContract, setNewContract] = useState('طوارئ المستشفى');
   const [isCustomNewContract, setIsCustomNewContract] = useState(false);
   const [customNewContract, setCustomNewContract] = useState('');
-  const [newTriage, setNewTriage] = useState('Level 3 - المستوى العادي');
+  const [newTriage, setNewTriage] = useState('Category 3 (GREEN) - عاجل خلال 30 د (Seen within 30 mins)');
   const [newBedNumber, setNewBedNumber] = useState('');
 
   // Contract Direct Manual Edit Modal State
@@ -176,14 +178,8 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
 
   // Interactive Multi-Click Cycle Handlers
   const handleCycleTriage = (record: ERRecord) => {
-    const levels = [
-      'Level 1 - إنعاش عاجل (Resuscitation)',
-      'Level 2 - طوارئ حادة (Emergent)',
-      'Level 3 - المستوى العادي (Urgent)',
-      'Level 4 - أقل عجلة (Less Urgent)',
-      'Level 5 - غير عاجل (Non-Urgent)',
-    ];
-    const currIdx = levels.findIndex(l => record.triageLevel && record.triageLevel.includes(l.substring(0, 7)));
+    const levels = TRIAGE_LEVELS.map(t => t.nameAr);
+    const currIdx = levels.findIndex(l => record.triageLevel && record.triageLevel.includes(l.substring(0, 10)));
     const nextIdx = currIdx === -1 ? 0 : (currIdx + 1) % levels.length;
     onUpdateRecord({
       ...record,
@@ -351,13 +347,13 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
 
   const shareRecordOnWhatsApp = (record: ERRecord) => {
     const delayStr = record.delay !== null && record.delay !== undefined ? formatDelayDisplay(record.delay) : '-';
-    const text = `*تقرير انتقال مريض (مستشفى الطوارئ والحالات الحرجة)*
+    const text = `*تقرير انتقال مريض (${inst.hospitalName})*
 ------------------------------------
 👤 *اسم المريض:* ${record.name}
 🆔 *الرقم الطبي:* ${record.medical}
 🏥 *القسم المحول إليه:* ${record.dept || 'غير محدد'}
 🧬 *جهة التعاقد:* ${record.contract || 'طوارئ المستشفى'}
-🌡️ *مستوى الفرز:* ${record.triageLevel || 'Level 3 - عادي'}
+🌡️ *مستوى الفرز:* ${record.triageLevel || 'Category 3 (GREEN) - عاجل خلال 30 د'}
 ⏳ *وقت القرار:* ${fmtDateTime(record.order)}
 ⏱️ *وقت النقل:* ${record.actual ? fmtDateTime(record.actual) : "قيد الانتظار ⏳"}
 ⏱️ *مدة الانتظار:* ${delayStr}
@@ -365,7 +361,7 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
 🛏️ *رقم السرير:* ${record.bedNumber || 'غير محدد'}
 📝 *نوع الخروج:* ${record.dischargeType || 'غير محدد'}
 
-📱 تم الإرسال من نظام متابعة طوارئ المستشفى الآلي.`;
+📱 تم الإرسال من ${inst.systemName} الآلي.`;
     
     const encoded = encodeURIComponent(text);
     window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
@@ -374,7 +370,7 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
   const shareAllRecordsOnWhatsApp = () => {
     if (filteredRecords.length === 0) return;
     
-    let text = `*📊 تقرير أوقات انتظار الطوارئ الشامل*
+    let text = `*📊 تقرير أوقات انتظار الطوارئ الشامل (${inst.hospitalName})*
 📅 *تاريخ التقرير:* ${new Date().toLocaleDateString('ar-EG')}
 👥 *إجمالي الحالات المعروضة:* ${filteredRecords.length}
 ------------------------------------
@@ -394,7 +390,7 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
 `;
     });
 
-    text += `\n📱 تم الإرسال من نظام متابعة طوارئ المستشفى الآلي.`;
+    text += `\n📱 تم الإرسال من ${inst.systemName} الآلي.`;
 
     const encoded = encodeURIComponent(text);
     window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
@@ -586,7 +582,7 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
                 printOfficialReport(filteredRecords, {
                   columns: cols,
                   reportTitle: 'النموذج الرسمي المعتمد لأوقات انتظار الطوارئ',
-                  hospitalName: 'مستشفى الطوارئ والحالات الحرجة',
+                  hospitalName: inst.hospitalName,
                 })
               }
               className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
@@ -819,18 +815,18 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
                             onClick={() => handleCycleTriage(record)}
                             title="انقر لتغيير مستوى الفرز سريعاً"
                             className={`cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold shadow-2xs transition active:scale-95 hover:ring-2 hover:ring-blue-400 ${
-                              record.triageLevel?.includes('Level 1')
+                              (record.triageLevel?.includes('Level 1') || record.triageLevel?.includes('Category 1'))
                                 ? 'bg-red-100 text-red-900 border border-red-300 hover:bg-red-200'
-                                : record.triageLevel?.includes('Level 2')
-                                ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
-                                : record.triageLevel?.includes('Level 4')
-                                ? 'bg-sky-100 text-sky-900 border border-sky-300 hover:bg-sky-200'
-                                : record.triageLevel?.includes('Level 5')
+                                : (record.triageLevel?.includes('Level 2') || record.triageLevel?.includes('Category 2'))
+                                ? 'bg-orange-100 text-orange-900 border border-orange-300 hover:bg-orange-200'
+                                : (record.triageLevel?.includes('Level 4') || record.triageLevel?.includes('Category 4'))
+                                ? 'bg-blue-100 text-blue-900 border border-blue-300 hover:bg-blue-200'
+                                : (record.triageLevel?.includes('Level 5') || record.triageLevel?.includes('Category 5'))
                                 ? 'bg-slate-100 text-slate-800 border border-slate-300 hover:bg-slate-200'
                                 : 'bg-emerald-50 text-emerald-900 border border-emerald-300 hover:bg-emerald-100'
                             }`}
                           >
-                            <span>{record.triageLevel || 'Level 3 - عادي'}</span>
+                            <span>{record.triageLevel || 'Category 3 (GREEN) - عاجل خلال 30 د'}</span>
                             <MousePointerClick className="w-2.5 h-2.5 opacity-60" />
                           </button>
                         </td>
