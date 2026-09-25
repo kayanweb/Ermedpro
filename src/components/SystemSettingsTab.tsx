@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { ERRecord, User, AppLanguage } from '../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ERRecord, User, AppLanguage, ScreensVisibilityConfig } from '../types';
 import { TRIAGE_LEVELS, DISCHARGE_TYPES, DEPARTMENTS, CONTRACT_TYPES, REASONS } from '../constants';
+import { getScreensVisibility, saveScreensVisibility, SCREENS_CHANGE_EVENT } from '../utils/screensConfig';
 import { UserManagementTab } from './UserManagementTab';
 import {
   Settings,
@@ -21,6 +22,8 @@ import {
   Clock,
   ShieldCheck,
   Users,
+  Radio,
+  Bed,
 } from 'lucide-react';
 
 interface SystemSettingsTabProps {
@@ -42,7 +45,35 @@ export const SystemSettingsTab: React.FC<SystemSettingsTabProps> = ({
   lang = 'ar',
   currentUser = null,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'columns' | 'rowFilters' | 'rowsManager' | 'quickAddRows' | 'cyclesInfo' | 'usersManager'>('columns');
+  const [activeSubTab, setActiveSubTab] = useState<'screensManager' | 'columns' | 'rowFilters' | 'rowsManager' | 'quickAddRows' | 'cyclesInfo' | 'usersManager'>('screensManager');
+
+  // Screens visibility config (persisted in localStorage and synchronized with event)
+  const [screensConfig, setScreensConfig] = useState<ScreensVisibilityConfig>(getScreensVisibility);
+
+  useEffect(() => {
+    const handleConfigChange = (e: any) => {
+      if (e.detail) {
+        setScreensConfig(e.detail);
+      } else {
+        setScreensConfig(getScreensVisibility());
+      }
+    };
+    window.addEventListener(SCREENS_CHANGE_EVENT, handleConfigChange);
+    return () => {
+      window.removeEventListener(SCREENS_CHANGE_EVENT, handleConfigChange);
+    };
+  }, []);
+
+  const toggleScreen = (screenKey: keyof ScreensVisibilityConfig) => {
+    const updated = {
+      ...screensConfig,
+      [screenKey]: !screensConfig[screenKey],
+    };
+    setScreensConfig(updated);
+    saveScreensVisibility(updated);
+    setSuccessMsg('تم حفظ وتحديث إعدادات إظهار الشاشات بنجاح!');
+    setTimeout(() => setSuccessMsg(''), 3000);
+  };
 
   // Columns visibility config persisted in localStorage
   const [cols, setCols] = useState(() => {
@@ -214,6 +245,21 @@ export const SystemSettingsTab: React.FC<SystemSettingsTabProps> = ({
 
           <div className="flex flex-wrap items-center gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700 text-xs">
             <button
+              onClick={() => setActiveSubTab('screensManager')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeSubTab === 'screensManager' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <EyeOff className="w-3.5 h-3.5" />
+              <span>إخفاء / إظهار الشاشات</span>
+              {(!screensConfig.showLiveTracking || !screensConfig.showBedManagement) && (
+                <span className="bg-amber-400 text-slate-900 font-bold px-1.5 py-0.2 rounded-full text-[10px]">
+                  مخفية
+                </span>
+              )}
+            </button>
+
+            <button
               onClick={() => setActiveSubTab('columns')}
               className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${
                 activeSubTab === 'columns' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-300 hover:text-white'
@@ -286,6 +332,169 @@ export const SystemSettingsTab: React.FC<SystemSettingsTabProps> = ({
         <div className="p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
           <span>{successMsg}</span>
+        </div>
+      )}
+
+      {/* Sub Tab 0: Screens & Navigation Tabs Visibility Manager */}
+      {activeSubTab === 'screensManager' && (
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div>
+              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                <EyeOff className="w-5 h-5 text-indigo-600" />
+                <span>إدارة وإخفاء الشاشات والتبويبات غير المطلوبة</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                تم استبعاد وإخفاء الشاشات غير المطلوبة من القائمة الرئيسية لتبسيط وسرعة العمل. يمكنك تفعيلها أو إخفاؤها بنقرة واحدة.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">الحفظ تلقائي وفوري</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Screen 1: Live Tracking Tab */}
+            <div
+              className={`p-5 rounded-2xl border transition-all ${
+                screensConfig.showLiveTracking
+                  ? 'bg-blue-50/60 border-blue-200 shadow-xs'
+                  : 'bg-slate-50 border-slate-200'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                      screensConfig.showLiveTracking
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-slate-200 text-slate-500'
+                    }`}
+                  >
+                    <Radio className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900">شاشة التتبع اللحظي وشاشة الانتظار</h4>
+                    <span className="text-[11px] font-mono text-slate-400">Live Waiting Stopwatch Screen</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => toggleScreen('showLiveTracking')}
+                  className={`px-3.5 py-1.5 rounded-xl font-bold text-xs cursor-pointer transition flex items-center gap-1.5 shadow-xs ${
+                    screensConfig.showLiveTracking
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                  }`}
+                >
+                  {screensConfig.showLiveTracking ? (
+                    <>
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>ظاهرة بالقائمة</span>
+                    </>
+                  ) : (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5" />
+                      <span>مخفية (غير نشطة)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-600 mt-3 leading-relaxed">
+                شاشة المؤقت التنازلي اللحظي للدقائق وبطاقات انتظار الحالات. تم إخفاؤها تلقائياً لعدم الحاجة إليها ولتسهيل التركيز على النموذج الرسمي.
+              </p>
+
+              <div className="mt-4 pt-3 border-t border-slate-200/70 flex items-center justify-between text-xs">
+                <span className="text-slate-500 font-medium">الوضع الحالي:</span>
+                <span
+                  className={`font-bold px-2.5 py-0.5 rounded-full text-[11px] ${
+                    screensConfig.showLiveTracking
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      : 'bg-rose-100 text-rose-800 border border-rose-200'
+                  }`}
+                >
+                  {screensConfig.showLiveTracking ? '✅ معروضة بالقائمة' : '🚫 مخفية ومستبعدة'}
+                </span>
+              </div>
+            </div>
+
+            {/* Screen 2: Bed Management Tab */}
+            <div
+              className={`p-5 rounded-2xl border transition-all ${
+                screensConfig.showBedManagement
+                  ? 'bg-purple-50/60 border-purple-200 shadow-xs'
+                  : 'bg-slate-50 border-slate-200'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                      screensConfig.showBedManagement
+                        ? 'bg-purple-600 text-white shadow-sm'
+                        : 'bg-slate-200 text-slate-500'
+                    }`}
+                  >
+                    <Bed className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900">شاشة إدارة الأسرّة والأقسام</h4>
+                    <span className="text-[11px] font-mono text-slate-400">Bed & Dept Management</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => toggleScreen('showBedManagement')}
+                  className={`px-3.5 py-1.5 rounded-xl font-bold text-xs cursor-pointer transition flex items-center gap-1.5 shadow-xs ${
+                    screensConfig.showBedManagement
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                  }`}
+                >
+                  {screensConfig.showBedManagement ? (
+                    <>
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>ظاهرة بالقائمة</span>
+                    </>
+                  ) : (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5" />
+                      <span>مخفية (غير نشطة)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-600 mt-3 leading-relaxed">
+                شاشة توزيع وتخصيص أسرة العناية المركزة والرعاية والأقسام الداخلية. تم إخفاؤها لعدم الحاجة إليها في دورة عمل الطوارئ الحالية.
+              </p>
+
+              <div className="mt-4 pt-3 border-t border-slate-200/70 flex items-center justify-between text-xs">
+                <span className="text-slate-500 font-medium">الوضع الحالي:</span>
+                <span
+                  className={`font-bold px-2.5 py-0.5 rounded-full text-[11px] ${
+                    screensConfig.showBedManagement
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      : 'bg-rose-100 text-rose-800 border border-rose-200'
+                  }`}
+                >
+                  {screensConfig.showBedManagement ? '✅ معروضة بالقائمة' : '🚫 مخفية ومستبعدة'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-indigo-50/80 border border-indigo-200 flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-indigo-600 shrink-0" />
+            <div className="text-xs text-indigo-900 leading-relaxed">
+              <span className="font-bold">المظهر الافتراضي للنظام: </span>
+              الشاشة الرئيسية الآن هي <strong>«نموذج ER الرسمي»</strong> مباشرةً، وبذلك تكون القائمة خفيفة ونظيفة وخالية من الشاشات الزائدة.
+            </div>
+          </div>
         </div>
       )}
 

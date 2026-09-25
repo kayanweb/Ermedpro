@@ -29,6 +29,11 @@ export interface LoginLog {
   userAgent?: string;
 }
 
+export interface ScreensVisibilityConfig {
+  showLiveTracking: boolean;
+  showBedManagement: boolean;
+}
+
 export type DepartmentType = 'ICU' | 'Intermediate' | 'Inpatient';
 
 export type BedStatus = 'Available' | 'Occupied' | 'Reserved' | 'Cleaning';

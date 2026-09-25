@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { User, ERRecord, HospitalBed, BedStatus, AppLanguage } from './types';
 import { USERS } from './constants';
+import { getScreensVisibility, SCREENS_CHANGE_EVENT } from './utils/screensConfig';
 import { LoginScreen } from './components/LoginScreen';
 import { Header } from './components/Header';
 import { TabsNav, TabType } from './components/TabsNav';
@@ -59,10 +60,31 @@ export default function App() {
   const [dbLatency, setDbLatency] = useState<number | undefined>(undefined);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
-  // Active navigation tab
-  const [activeTab, setActiveTab] = useState<TabType>('live');
+  // Screens visibility config (defaults to false for live and beds)
+  const [screensConfig, setScreensConfig] = useState(getScreensVisibility);
+
+  // Active navigation tab (default to primary official ER report)
+  const [activeTab, setActiveTab] = useState<TabType>('report');
   const [deptFilterFromDash, setDeptFilterFromDash] = useState<string>('');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Listen to screens visibility config updates
+  useEffect(() => {
+    const handleConfigChange = (e: any) => {
+      const newConfig = e.detail || getScreensVisibility();
+      setScreensConfig(newConfig);
+      if (activeTab === 'live' && !newConfig.showLiveTracking) {
+        setActiveTab('report');
+      }
+      if (activeTab === 'beds' && !newConfig.showBedManagement) {
+        setActiveTab('report');
+      }
+    };
+    window.addEventListener(SCREENS_CHANGE_EVENT, handleConfigChange);
+    return () => {
+      window.removeEventListener(SCREENS_CHANGE_EVENT, handleConfigChange);
+    };
+  }, [activeTab]);
 
   // Modals state
   const [showAuditModal, setShowAuditModal] = useState(false);
@@ -502,8 +524,8 @@ export default function App() {
           </div>
         ) : (
           <>
-            {/* 1. Live Tracking & Stopwatch Monitor */}
-            {activeTab === 'live' && (
+            {/* 1. Live Tracking & Stopwatch Monitor (Only when enabled in settings) */}
+            {activeTab === 'live' && screensConfig.showLiveTracking && (
               <LiveTrackingTab
                 records={records}
                 beds={beds}
@@ -511,7 +533,9 @@ export default function App() {
                 currentUser={currentUser}
                 onTransferNow={handleInitiateTransfer}
                 onOpenQR={rec => setSelectedQrRecord(rec)}
-                onOpenBedAssign={() => setActiveTab('beds')}
+                onOpenBedAssign={() => {
+                  if (screensConfig.showBedManagement) setActiveTab('beds');
+                }}
                 onRefresh={() => loadDataFromNeon(false)}
               />
             )}
@@ -529,8 +553,8 @@ export default function App() {
               />
             )}
 
-            {/* 3. Bed Management */}
-            {activeTab === 'beds' && (
+            {/* 3. Bed Management (Only when enabled in settings) */}
+            {activeTab === 'beds' && screensConfig.showBedManagement && (
               <BedManagementTab
                 beds={beds}
                 records={records}

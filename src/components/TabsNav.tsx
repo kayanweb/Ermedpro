@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { UserRole, AppLanguage } from '../types';
+import { UserRole, AppLanguage, ScreensVisibilityConfig } from '../types';
 import { t } from '../utils/translations';
+import { getScreensVisibility, SCREENS_CHANGE_EVENT } from '../utils/screensConfig';
 import {
   Radio,
   FileSpreadsheet,
@@ -70,6 +71,23 @@ export const TabsNav: React.FC<TabsNavProps> = ({
     return false;
   });
 
+  // Screens visibility config (defaults to false for live and beds)
+  const [screensConfig, setScreensConfig] = useState<ScreensVisibilityConfig>(getScreensVisibility);
+
+  useEffect(() => {
+    const handleConfigChange = (e: any) => {
+      if (e.detail) {
+        setScreensConfig(e.detail);
+      } else {
+        setScreensConfig(getScreensVisibility());
+      }
+    };
+    window.addEventListener(SCREENS_CHANGE_EVENT, handleConfigChange);
+    return () => {
+      window.removeEventListener(SCREENS_CHANGE_EVENT, handleConfigChange);
+    };
+  }, []);
+
   const toggleCollapse = () => {
     setIsCollapsed(prev => {
       const next = !prev;
@@ -81,28 +99,36 @@ export const TabsNav: React.FC<TabsNavProps> = ({
   };
 
   const tabs: TabItem[] = [
-    {
-      id: 'live',
-      label: t('tabLive', lang),
-      icon: Radio,
-      badge: pendingCount > 0 ? `${pendingCount}` : undefined,
-      badgeColor: criticalCount > 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-amber-100 text-amber-800',
-      category: 'clinical',
-    },
+    ...(screensConfig.showLiveTracking
+      ? [
+          {
+            id: 'live' as TabType,
+            label: t('tabLive', lang),
+            icon: Radio,
+            badge: pendingCount > 0 ? `${pendingCount}` : undefined,
+            badgeColor: criticalCount > 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-amber-100 text-amber-800',
+            category: 'clinical' as const,
+          },
+        ]
+      : []),
     {
       id: 'report',
       label: t('tabReport', lang),
       icon: FileSpreadsheet,
       category: 'clinical',
     },
-    {
-      id: 'beds',
-      label: t('tabBeds', lang),
-      icon: Bed,
-      badge: `${availableBedsCount} ${lang === 'ar' ? 'متاح' : 'free'}`,
-      badgeColor: 'bg-emerald-100 text-emerald-800',
-      category: 'clinical',
-    },
+    ...(screensConfig.showBedManagement
+      ? [
+          {
+            id: 'beds' as TabType,
+            label: t('tabBeds', lang),
+            icon: Bed,
+            badge: `${availableBedsCount} ${lang === 'ar' ? 'متاح' : 'free'}`,
+            badgeColor: 'bg-emerald-100 text-emerald-800',
+            category: 'clinical' as const,
+          },
+        ]
+      : []),
     {
       id: 'dash',
       label: t('tabDashboard', lang),

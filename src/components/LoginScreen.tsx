@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { loginUser, normalizeArabicDigits } from '../services/api';
-import { AlertCircle, Shield, MessageCircle, Eye, EyeOff, LogIn, Loader2, User as UserIcon, Lock, HelpCircle } from 'lucide-react';
+import { AlertCircle, Shield, MessageCircle, Eye, EyeOff, LogIn, Loader2, User as UserIcon, Lock } from 'lucide-react';
 
 interface LoginScreenProps {
   onLogin: (user: User) => void;
@@ -13,7 +13,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showHelpHint, setShowHelpHint] = useState(false);
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -63,27 +62,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         </div>
 
         <div className="p-6 sm:p-8 space-y-6">
-          {/* Error Message with Smart Guidance */}
+          {/* Error Message */}
           {error && (
-            <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm space-y-1.5 animate-fadeIn">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 shrink-0 text-red-500" />
-                <span className="font-bold">{error}</span>
-              </div>
-              <p className="text-[11px] text-red-600 leading-relaxed ps-7">
-                تأكد من رقم الموظف (مثل <code className="bg-red-100 px-1 rounded font-bold">21094</code> أو <code className="bg-red-100 px-1 rounded font-bold">20810</code> أو <code className="bg-red-100 px-1 rounded font-bold">admin</code>) وكلمة المرور الافتراضية (<code className="bg-red-100 px-1 rounded font-bold">123</code>).
-              </p>
+            <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm flex items-center gap-2.5 animate-fadeIn">
+              <AlertCircle className="w-5 h-5 shrink-0 text-red-500" />
+              <span className="font-semibold">{error}</span>
             </div>
           )}
 
           {/* Login Form */}
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <UserIcon className="w-3.5 h-3.5 text-slate-500" />
-                  <span>اسم المستخدم أو رقم الموظف (Username)</span>
-                </span>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
+                <UserIcon className="w-3.5 h-3.5 text-slate-500" />
+                <span>اسم المستخدم أو رقم الموظف (Username)</span>
               </label>
               <input
                 id="login-username-input"
@@ -101,20 +93,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <Lock className="w-3.5 h-3.5 text-slate-500" />
-                  <span>كلمة المرور (Password)</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowHelpHint(!showHelpHint)}
-                  className="text-[11px] text-slate-400 hover:text-indigo-600 flex items-center gap-0.5 cursor-pointer"
-                  title="المساعدة في الدخول"
-                >
-                  <HelpCircle className="w-3 h-3" />
-                  <span>مساعدة</span>
-                </button>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
+                <Lock className="w-3.5 h-3.5 text-slate-500" />
+                <span>كلمة المرور (Password)</span>
               </label>
               <div className="relative">
                 <input
@@ -139,16 +120,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-
-              {showHelpHint && (
-                <div className="p-2.5 mt-2 bg-indigo-50/80 border border-indigo-200 rounded-xl text-[11px] text-indigo-900 leading-relaxed animate-in fade-in">
-                  <p className="font-bold mb-1">بيانات الحسابات المصرحة بالنظام:</p>
-                  <ul className="space-y-0.5 text-indigo-800">
-                    <li>• الإدارة: <span className="font-mono font-bold">21094</span> أو <span className="font-mono font-bold">admin</span> (كلمة المرور: <span className="font-mono font-bold">123</span>)</li>
-                    <li>• التمريض: <span className="font-mono font-bold">20810</span> (كلمة المرور: <span className="font-mono font-bold">123</span>)</li>
-                  </ul>
-                </div>
-              )}
             </div>
 
             <button
