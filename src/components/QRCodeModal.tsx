@@ -59,10 +59,10 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ record, onClose, lang 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden my-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-4 flex items-center justify-between">
+        <div className="shrink-0 bg-gradient-to-r from-slate-900 to-slate-800 text-white p-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
               <QrCode className="w-5 h-5" />
@@ -78,14 +78,14 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ record, onClose, lang 
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition"
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Printable Card Body */}
-        <div className="p-6 text-center print:p-8" id="printable-qr-card">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 text-center print:p-8" id="printable-qr-card">
           {/* Hospital Header for Print */}
           <div className="border-b border-slate-200 pb-3 mb-4 text-center">
             <div className="flex items-center justify-center gap-1.5 text-emerald-600 font-bold text-sm mb-0.5">

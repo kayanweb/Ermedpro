@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { DepartmentType, ERRecord } from '../types';
 import { REASONS, DEPARTMENTS, CONTRACT_TYPES, CAME_FROM_OPTIONS, TRIAGE_LEVELS, DISCHARGE_TYPES } from '../constants';
 import { calcMinutesDiff, toLocalDatetimeInput } from '../utils/dateTime';
+import { DoctorSelect } from './DoctorSelect';
 import { X, Save, Clock, CheckCircle, CreditCard, Ambulance, Stethoscope, Activity } from 'lucide-react';
 
 interface RecordEditModalProps {
@@ -66,9 +67,10 @@ export const RecordEditModal: React.FC<RecordEditModalProps> = ({ record, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white rounded-2xl max-w-xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 overflow-hidden text-right my-auto">
+        {/* Pinned Header */}
+        <div className="shrink-0 flex items-center justify-between p-4 px-6 border-b border-slate-100 bg-white">
           <div className="flex items-center gap-2">
             <span className="p-2 rounded-lg bg-blue-100 text-blue-700">✏️</span>
             <div>
@@ -84,7 +86,9 @@ export const RecordEditModal: React.FC<RecordEditModalProps> = ({ record, onClos
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+          {/* Scrollable Body */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block font-bold text-slate-700 mb-1">اسم المريض *</label>
@@ -183,13 +187,11 @@ export const RecordEditModal: React.FC<RecordEditModalProps> = ({ record, onClos
                 />
               </div>
               <div>
-                <label className="block font-bold text-slate-700 mb-1">اسم الطبيب المعالج</label>
-                <input
-                  type="text"
+                <DoctorSelect
+                  showLabel
+                  label="اسم الطبيب المعالج"
                   value={doctorName}
-                  onChange={e => setDoctorName(e.target.value)}
-                  placeholder="اسم الطبيب"
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white outline-none font-semibold"
+                  onChange={setDoctorName}
                 />
               </div>
             </div>
@@ -363,18 +365,20 @@ export const RecordEditModal: React.FC<RecordEditModalProps> = ({ record, onClos
               className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none"
             />
           </div>
+          </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+          {/* Pinned Sticky Bottom Actions - Always visible on every screen */}
+          <div className="shrink-0 p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 transition cursor-pointer font-semibold"
+              className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 transition cursor-pointer font-semibold text-xs"
             >
               إلغاء
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+              className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs text-xs"
             >
               <Save className="w-4 h-4" />
               <span>حفظ التعديلات</span>

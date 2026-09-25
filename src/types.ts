@@ -11,6 +11,14 @@ export interface User {
   createdAt?: string;
 }
 
+export interface HospitalDoctor {
+  id: string;
+  name: string;
+  specialty?: string;
+  active?: boolean;
+  createdAt?: string;
+}
+
 export interface LoginLog {
   id: string;
   username: string;

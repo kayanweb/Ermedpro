@@ -1,4 +1,5 @@
-import { ERRecord, User, HospitalBed, AuditLogItem, UserAuditStat, CaseComment, LoginLog } from '../types';
+import { ERRecord, User, HospitalDoctor, HospitalBed, AuditLogItem, UserAuditStat, CaseComment, LoginLog } from '../types';
+import { USERS, DEFAULT_DOCTORS } from '../constants';
 import { formatErrorMessage } from '../utils/errorUtils';
 
 export interface DbHealthStatus {
@@ -234,10 +235,25 @@ export async function resetDemoRecordsInDb(): Promise<ERRecord[]> {
 // ==========================================
 // USERS API
 // ==========================================
+export function normalizeUser(u: User): User {
+  if (!u) return u;
+  let id = u.id || u.username;
+  // Remove any legacy "u-" prefix completely
+  id = id.replace(/^u-?/i, '');
+  if (id === 'nurse-sara' || u.username === '20810') {
+    id = '20810';
+  } else if (id === 'viewer-mohamed' || u.username === '21094') {
+    id = '21094';
+  } else if (u.username === 'admin') {
+    id = 'admin';
+  }
+  return { ...u, id };
+}
+
 export async function fetchUsersFromDb(): Promise<User[]> {
   try {
     const data = await safeFetchJson<{ success: boolean; users: User[] }>('/api/users', undefined, 3, 600);
-    const users = data.users || [];
+    const users = (data.users || []).map(normalizeUser);
     try {
       localStorage.setItem('cached_users', JSON.stringify(users));
     } catch (e) {
@@ -250,12 +266,92 @@ export async function fetchUsersFromDb(): Promise<User[]> {
       const cached = localStorage.getItem('cached_users');
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) return parsed.map(normalizeUser);
       }
     } catch (e) {
       // ignore
     }
-    return [];
+    return USERS.map(normalizeUser);
+  }
+}
+
+export async function loginUser(username: string, password: string): Promise<User> {
+  const cleanUsername = username.trim().toLowerCase();
+  const cleanPassword = password.trim();
+
+  try {
+    const data = await safeMutationJson<{ success: boolean; user: User; error?: string }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        username: cleanUsername,
+        password: cleanPassword,
+      }),
+    });
+
+    if (!data.success || !data.user) {
+      throw new Error(data.error || 'اسم المستخدم أو كلمة المرور غير صحيحة');
+    }
+
+    const normalizedUser = normalizeUser(data.user);
+
+    try {
+      sessionStorage.setItem('er_user', JSON.stringify(normalizedUser));
+    } catch {
+      // ignore
+    }
+
+    // Keep cached_users updated
+    try {
+      const cached = localStorage.getItem('cached_users');
+      let users: User[] = cached ? JSON.parse(cached) : [];
+      if (!Array.isArray(users)) users = [];
+      const idx = users.findIndex(u => u.username.toLowerCase() === cleanUsername);
+      if (idx >= 0) {
+        users[idx] = { ...users[idx], ...normalizedUser };
+      } else {
+        users.push(normalizedUser);
+      }
+      localStorage.setItem('cached_users', JSON.stringify(users));
+    } catch {
+      // ignore
+    }
+
+    return normalizedUser;
+  } catch (err: any) {
+    const errMsg = err?.message || '';
+    if (errMsg.includes('معطل') || errMsg.includes('غير صحيحة') || errMsg.includes('مطلوبان')) {
+      throw err;
+    }
+
+    // Fallback: If network/server is unavailable, verify against cached users or USERS constants
+    try {
+      const cached = localStorage.getItem('cached_users');
+      let userList: User[] = USERS;
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          userList = parsed;
+        }
+      }
+      const localMatch = userList.find(
+        u => u.username.toLowerCase() === cleanUsername && (u.password ? u.password === cleanPassword : cleanPassword === '123' || cleanPassword === '123456')
+      );
+      if (localMatch) {
+        if (localMatch.active === false) {
+          throw new Error('هذا الحساب معطل حالياً من قِبل إدارة النظام. يرجى التواصل مع المسؤول.');
+        }
+        try {
+          sessionStorage.setItem('er_user', JSON.stringify(localMatch));
+        } catch {
+          // ignore
+        }
+        return localMatch;
+      }
+    } catch (e: any) {
+      if (e.message && e.message.includes('معطل')) throw e;
+    }
+
+    throw err;
   }
 }
 
@@ -264,7 +360,17 @@ export async function createUserInDb(user: Partial<User>): Promise<User> {
     method: 'POST',
     body: JSON.stringify(user),
   });
-  return data.user;
+  const created = data.user;
+  try {
+    const cached = localStorage.getItem('cached_users');
+    let list: User[] = cached ? JSON.parse(cached) : [];
+    if (!Array.isArray(list)) list = [];
+    list.push({ ...created, password: user.password });
+    localStorage.setItem('cached_users', JSON.stringify(list));
+  } catch {
+    // ignore
+  }
+  return created;
 }
 
 export async function updateUserInDb(id: string, updates: Partial<User>): Promise<User> {
@@ -272,13 +378,34 @@ export async function updateUserInDb(id: string, updates: Partial<User>): Promis
     method: 'PUT',
     body: JSON.stringify(updates),
   });
-  return data.user;
+  const updated = data.user;
+  try {
+    const cached = localStorage.getItem('cached_users');
+    let list: User[] = cached ? JSON.parse(cached) : [];
+    if (Array.isArray(list)) {
+      list = list.map(u => (u.id === id ? { ...u, ...updated, ...(updates.password ? { password: updates.password } : {}) } : u));
+      localStorage.setItem('cached_users', JSON.stringify(list));
+    }
+  } catch {
+    // ignore
+  }
+  return updated;
 }
 
 export async function deleteUserFromDb(id: string): Promise<void> {
   await safeMutationJson<{ success: boolean }>(`/api/users/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
+  try {
+    const cached = localStorage.getItem('cached_users');
+    let list: User[] = cached ? JSON.parse(cached) : [];
+    if (Array.isArray(list)) {
+      list = list.filter(u => u.id !== id);
+      localStorage.setItem('cached_users', JSON.stringify(list));
+    }
+  } catch {
+    // ignore
+  }
 }
 
 export async function logUserLogin(user: User): Promise<void> {
@@ -303,6 +430,63 @@ export async function fetchLoginLogs(): Promise<LoginLog[]> {
   } catch (err) {
     return [];
   }
+}
+
+// ==========================================
+// DOCTORS API
+// ==========================================
+export async function fetchDoctorsFromDb(): Promise<HospitalDoctor[]> {
+  try {
+    const data = await safeFetchJson<{ success: boolean; doctors: HospitalDoctor[] }>('/api/doctors', undefined, 3, 600);
+    const docs = data.doctors || [];
+    if (docs.length > 0) {
+      try {
+        localStorage.setItem('cached_doctors', JSON.stringify(docs));
+      } catch {
+        // ignore
+      }
+      return docs;
+    }
+  } catch (err) {
+    console.warn('fetchDoctorsFromDb fallback to cached doctors:', err);
+  }
+
+  try {
+    const cached = localStorage.getItem('cached_doctors');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {
+    // ignore
+  }
+
+  return DEFAULT_DOCTORS.map(d => ({
+    id: d.id,
+    name: d.name,
+    specialty: d.specialty,
+    active: true,
+  }));
+}
+
+export async function createDoctorInDb(name: string, specialty?: string): Promise<HospitalDoctor> {
+  const data = await safeMutationJson<{ success: boolean; doctor: HospitalDoctor; message?: string }>('/api/doctors', {
+    method: 'POST',
+    body: JSON.stringify({ name: name.trim(), specialty: specialty?.trim() }),
+  });
+  const created = data.doctor;
+  try {
+    const cached = localStorage.getItem('cached_doctors');
+    let list: HospitalDoctor[] = cached ? JSON.parse(cached) : [];
+    if (!Array.isArray(list)) list = [];
+    if (!list.some(d => d.name.toLowerCase() === created.name.toLowerCase())) {
+      list.push(created);
+      localStorage.setItem('cached_doctors', JSON.stringify(list));
+    }
+  } catch {
+    // ignore
+  }
+  return created;
 }
 
 // ==========================================

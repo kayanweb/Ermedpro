@@ -410,9 +410,9 @@ export const BedManagementTab: React.FC<BedManagementTabProps> = ({
 
       {/* Bed Assignment Modal */}
       {assignModalBed && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden">
-            <div className="bg-slate-900 text-white p-4 px-6 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden my-auto text-right">
+            <div className="shrink-0 bg-slate-900 text-white p-4 px-6 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
                   <Bed className="w-5 h-5" />
@@ -427,14 +427,15 @@ export const BedManagementTab: React.FC<BedManagementTabProps> = ({
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setAssignModalBed(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
+                className="text-slate-400 hover:text-white p-1 rounded-lg text-lg cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
               <p className="text-xs text-slate-600">
                 {lang === 'ar'
                   ? 'اختر مريضاً من حالات الطوارئ قيد الانتظار لربطه بهذا السرير وتحديث وجهته تلقائياً في Neon:'
@@ -446,7 +447,7 @@ export const BedManagementTab: React.FC<BedManagementTabProps> = ({
                   {lang === 'ar' ? 'لا توجد حالات طوارئ قيد الانتظار حالياً' : 'No waiting emergency patients available'}
                 </div>
               ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                   {pendingPatients.map(p => (
                     <label
                       key={p.id}
@@ -462,7 +463,7 @@ export const BedManagementTab: React.FC<BedManagementTabProps> = ({
                           name="selectedPatient"
                           checked={selectedRecordId === p.id}
                           onChange={() => setSelectedRecordId(p.id)}
-                          className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
+                          className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                         />
                         <div>
                           <p className="font-bold text-slate-900 text-xs">{p.name}</p>
@@ -476,23 +477,26 @@ export const BedManagementTab: React.FC<BedManagementTabProps> = ({
                   ))}
                 </div>
               )}
+            </div>
 
-              <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
-                <button
-                  onClick={handleConfirmAssignment}
-                  disabled={!selectedRecordId || loadingAction === assignModalBed.id}
-                  className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>{loadingAction === assignModalBed.id ? (lang === 'ar' ? 'جاري الحفظ في Neon...' : 'Saving to Neon...') : (lang === 'ar' ? 'تأكيد التخصيص' : 'Confirm Assignment')}</span>
-                </button>
-                <button
-                  onClick={() => setAssignModalBed(null)}
-                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-xl transition"
-                >
-                  {t('cancel', lang)}
-                </button>
-              </div>
+            {/* Pinned Sticky Bottom Actions */}
+            <div className="shrink-0 p-3 sm:p-4 bg-slate-50 border-t border-slate-100 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleConfirmAssignment}
+                disabled={!selectedRecordId || loadingAction === assignModalBed.id}
+                className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{loadingAction === assignModalBed.id ? (lang === 'ar' ? 'جاري الحفظ في Neon...' : 'Saving to Neon...') : (lang === 'ar' ? 'تأكيد التخصيص' : 'Confirm Assignment')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssignModalBed(null)}
+                className="py-2.5 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+              >
+                {t('cancel', lang)}
+              </button>
             </div>
           </div>
         </div>

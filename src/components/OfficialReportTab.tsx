@@ -1017,22 +1017,24 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
 
       {/* Quick Add Row Modal */}
       {showAddRowModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden text-right">
-            <div className="bg-indigo-900 text-white p-4 px-6 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden text-right my-auto">
+            <div className="shrink-0 bg-indigo-900 text-white p-4 px-6 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Plus className="w-5 h-5 text-indigo-300" />
                 <h3 className="font-bold text-base">إضافة صف وحالة جديدة للتقرير مباشرة</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setShowAddRowModal(false)}
-                className="text-slate-300 hover:text-white text-lg font-bold"
+                className="text-slate-300 hover:text-white text-lg font-bold p-1 rounded-lg cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateQuickRow} className="p-6 space-y-4">
+            <form onSubmit={handleCreateQuickRow} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">اسم المريض *</label>
                 <input
@@ -1136,17 +1138,20 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+              </div>
+
+              {/* Pinned Sticky Bottom Actions - Always visible on every screen */}
+              <div className="shrink-0 p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowAddRowModal(false)}
-                  className="px-4 py-2 border border-slate-300 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-50"
+                  className="px-4 py-2 border border-slate-300 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-100 transition cursor-pointer"
                 >
                   إلغاء
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs"
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
                 >
                   إضافة الصف وحفظ السجل
                 </button>
@@ -1170,23 +1175,24 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
 
       {/* Status Change Confirmation & Options Modal */}
       {statusPopupRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden text-right">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden text-right my-auto">
             {/* Header */}
-            <div className="bg-slate-900 text-white p-4 px-6 flex items-center justify-between">
+            <div className="shrink-0 bg-slate-900 text-white p-4 px-6 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-indigo-400" />
                 <h3 className="font-bold text-base">تبديل الحالة وتفاصيل وقت النقل</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setStatusPopupRecord(null)}
-                className="text-slate-400 hover:text-white text-lg font-bold transition"
+                className="text-slate-400 hover:text-white text-lg font-bold p-1 rounded-lg transition cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
               {/* Patient Info Card */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
                 <div className="text-[10px] text-slate-400 font-bold">اسم المريض ورقمه الطبي:</div>
@@ -1297,23 +1303,24 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
                 <span>تفعيل هذا المنبثق مستقبلاً (إلغاء التحديد يفعل التبديل الفوري بنقرة واحدة)</span>
               </label>
 
-              {/* Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setStatusPopupRecord(null)}
-                  className="px-4 py-2 border border-slate-300 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-50 cursor-pointer"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveStatusPopup}
-                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer"
-                >
-                  حفظ وتطبيق التغييرات
-                </button>
-              </div>
+            </div>
+
+            {/* Pinned Sticky Bottom Actions */}
+            <div className="shrink-0 p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setStatusPopupRecord(null)}
+                className="px-4 py-2 border border-slate-300 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-100 transition cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveStatusPopup}
+                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
+              >
+                حفظ وتطبيق التغييرات
+              </button>
             </div>
           </div>
         </div>
@@ -1321,9 +1328,9 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
 
       {/* Contract Quick Selection / Manual Write Modal */}
       {editingContractRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden text-right">
-            <div className="bg-purple-900 text-white p-4 px-6 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden text-right my-auto">
+            <div className="shrink-0 bg-purple-900 text-white p-4 px-6 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="p-1.5 rounded-lg bg-purple-800 text-purple-200 text-base">💰</span>
                 <div>
@@ -1332,14 +1339,15 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setEditingContractRecord(null)}
-                className="text-purple-300 hover:text-white text-lg font-bold transition"
+                className="text-purple-300 hover:text-white text-lg font-bold p-1 rounded-lg transition cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
               {/* Patient Info */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                 <div className="text-[10px] text-slate-400 font-bold">المريض:</div>
@@ -1387,30 +1395,31 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
                 </p>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setEditingContractRecord(null)}
-                  className="px-4 py-2 border border-slate-300 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-50 cursor-pointer"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const finalVal = customContractInput.trim() || 'طوارئ المستشفى';
-                    onUpdateRecord({
-                      ...editingContractRecord,
-                      contract: finalVal,
-                    });
-                    setEditingContractRecord(null);
-                  }}
-                  className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer"
-                >
-                  حفظ جهة التعاقد
-                </button>
-              </div>
+            </div>
+
+            {/* Pinned Sticky Bottom Action Buttons */}
+            <div className="shrink-0 p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingContractRecord(null)}
+                className="px-4 py-2 border border-slate-300 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-100 transition cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const finalVal = customContractInput.trim() || 'طوارئ المستشفى';
+                  onUpdateRecord({
+                    ...editingContractRecord,
+                    contract: finalVal,
+                  });
+                  setEditingContractRecord(null);
+                }}
+                className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
+              >
+                حفظ جهة التعاقد
+              </button>
             </div>
           </div>
         </div>
@@ -1418,27 +1427,28 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
 
       {/* Column Visibility Configuration Modal */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden text-right">
-            <div className="bg-slate-900 text-white p-4 px-6 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden text-right my-auto">
+            <div className="shrink-0 bg-slate-900 text-white p-4 px-6 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Settings2 className="w-5 h-5 text-amber-400" />
                 <h3 className="font-bold text-base">إعدادات تخصيص أعمدة الجدول الرسمية</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setShowSettingsModal(false)}
-                className="text-slate-400 hover:text-white text-lg font-bold"
+                className="text-slate-400 hover:text-white text-lg font-bold p-1 rounded-lg cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
               <p className="text-xs text-slate-600 leading-relaxed">
                 حدد الأعمدة التي ترغب في إظهارها أو إخفائها من جدول التقرير الرسمي. يتم حفظ تفضيلاتك تلقائياً في هذا المتصفح.
               </p>
 
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer border border-slate-200">
                   <input
                     type="checkbox"
@@ -1589,21 +1599,24 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
                   <span>عمود الإجراءات (Actions)</span>
                 </label>
               </div>
+            </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-slate-200">
-                <button
-                  onClick={() => setCols(DEFAULT_COLUMNS)}
-                  className="text-xs text-blue-600 font-bold hover:underline"
-                >
-                  إعادة ضبط للأوضاع الافتراضية
-                </button>
-                <button
-                  onClick={() => setShowSettingsModal(false)}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs"
-                >
-                  حفظ وإغلاق
-                </button>
-              </div>
+            {/* Pinned Sticky Bottom Actions */}
+            <div className="shrink-0 p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setCols(DEFAULT_COLUMNS)}
+                className="text-xs text-blue-600 font-bold hover:underline cursor-pointer"
+              >
+                إعادة ضبط للأوضاع الافتراضية
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSettingsModal(false)}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
+              >
+                حفظ وإغلاق
+              </button>
             </div>
           </div>
         </div>

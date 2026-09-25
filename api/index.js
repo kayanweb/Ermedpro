@@ -124,13 +124,39 @@ async function initDatabase() {
       await pool.query(`
         INSERT INTO hospital_users (id, username, password, name, role, title_ar, active)
         VALUES
-          ('u-admin', 'admin', 'admin123', '\u062F. \u0645\u0631\u0648\u0627\u0646 \u0627\u0644\u0628\u062F\u0631\u064A', 'Admin', '\u0645\u062F\u064A\u0631 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0648\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0646\u0638\u0627\u0645', true),
-          ('u-dr-ahmed', 'dr.ahmed', 'doc123', '\u062F. \u0623\u062D\u0645\u062F \u0633\u0644\u064A\u0645\u0627\u0646', 'Doctor', '\u0627\u0633\u062A\u0634\u0627\u0631\u064A \u0637\u0628 \u0627\u0644\u0637\u0648\u0627\u0631\u0626', true),
-          ('u-nurse-sara', 'nurse.sara', 'nurse123', '\u0645. \u0633\u0627\u0631\u0629 \u0645\u062D\u0645\u0648\u062F', 'Nurse', '\u0645\u0634\u0631\u0641\u0629 \u062A\u0645\u0631\u064A\u0636 \u0627\u0644\u0637\u0648\u0627\u0631\u0626', true),
-          ('u-viewer-mohamed', 'viewer', 'view123', '\u0623. \u0645\u062D\u0645\u062F \u0643\u0627\u0645\u0644', 'Viewer', '\u0645\u0631\u0627\u0642\u0628 \u062C\u0648\u062F\u0629 \u0648\u0625\u062D\u0635\u0627\u0621 (\u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637)', true)
+          ('admin', 'admin', '123', '\u062F \u0634\u064A\u0645\u0627\u0621 \u0627\u062D\u0645\u062F \u0627\u0644\u0633\u064A\u062F', 'Admin', 'Nurse director', true),
+          ('20810', '20810', '123', '\u0645. \u0645\u062D\u0645\u0648\u062F \u0639\u0645\u0631', 'Nurse', '\u0645\u0634\u0631\u0641 \u062A\u0645\u0631\u064A\u0636 \u0627\u0644\u0637\u0648\u0627\u0631\u0626', true),
+          ('21094', '21094', '123', 'MOHAMED ELSAYED ABD ALLAH', 'Admin', 'Admin', true)
         ON CONFLICT (username) DO NOTHING;
       `);
+    } else {
+      await pool.query(`
+        UPDATE hospital_users SET id = REGEXP_REPLACE(id, '^u-', '') WHERE id LIKE 'u-%';
+        UPDATE hospital_users SET id = 'admin' WHERE username = 'admin' AND id != 'admin';
+        UPDATE hospital_users SET id = '20810' WHERE username = '20810' AND id != '20810';
+        UPDATE hospital_users SET id = '21094' WHERE username = '21094' AND id != '21094';
+      `);
     }
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS hospital_doctors (
+        id VARCHAR(128) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        specialty VARCHAR(150) DEFAULT '\u0637\u0648\u0627\u0631\u0626',
+        active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      INSERT INTO hospital_doctors (id, name, specialty)
+      VALUES
+        ('doc-1', '\u062F \u0634\u064A\u0645\u0627\u0621 \u0627\u062D\u0645\u062F \u0627\u0644\u0633\u064A\u062F', '\u0637\u0648\u0627\u0631\u0626 / Nurse director'),
+        ('doc-2', 'MOHAMED ELSAYED ABD ALLAH', '\u0627\u0633\u062A\u0634\u0627\u0631\u064A \u0637\u0648\u0627\u0631\u0626'),
+        ('doc-3', '\u0645. \u0645\u062D\u0645\u0648\u062F \u0639\u0645\u0631', '\u0645\u0634\u0631\u0641 \u0637\u0648\u0627\u0631\u0626'),
+        ('doc-4', '\u062F. \u0623\u062D\u0645\u062F \u0645\u0635\u0637\u0641\u0649', '\u0623\u062E\u0635\u0627\u0626\u064A \u0637\u0648\u0627\u0631\u0626'),
+        ('doc-5', '\u062F. \u0633\u0627\u0631\u0629 \u0625\u0628\u0631\u0627\u0647\u064A\u0645', '\u0637\u0628\u064A\u0628 \u0645\u0642\u064A\u0645 \u0637\u0648\u0627\u0631\u0626'),
+        ('doc-6', '\u062F. \u0645\u062D\u0645\u062F \u062E\u0627\u0644\u062F', '\u0623\u062E\u0635\u0627\u0626\u064A \u0639\u0638\u0627\u0645 \u0637\u0648\u0627\u0631\u0626'),
+        ('doc-7', '\u062F. \u0631\u064A\u0645 \u0639\u0628\u062F \u0627\u0644\u0639\u0632\u064A\u0632', '\u0623\u062E\u0635\u0627\u0626\u064A \u0628\u0627\u0637\u0646\u0629 \u0637\u0648\u0627\u0631\u0626')
+      ON CONFLICT (id) DO NOTHING;
+    `);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS hospital_login_logs (
         id VARCHAR(128) PRIMARY KEY,
@@ -908,7 +934,7 @@ app.get("/api/users", async (req, res) => {
 });
 app.post("/api/users", async (req, res) => {
   try {
-    const { username, password, name, role, titleAr } = req.body;
+    const { username, password, name, role, titleAr, active } = req.body;
     if (!username || !name) {
       return res.status(400).json({ success: false, error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0648\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u0645\u0644 \u0645\u0637\u0644\u0648\u0628\u0627\u0646" });
     }
@@ -917,12 +943,14 @@ app.post("/api/users", async (req, res) => {
     if (existing.rows.length > 0) {
       return res.status(400).json({ success: false, error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0647\u0630\u0627 \u0645\u0633\u062C\u0644 \u0645\u0633\u0628\u0642\u0627\u064B\u060C \u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0633\u0645 \u0645\u0633\u062A\u062E\u062F\u0645 \u0622\u062E\u0631" });
     }
-    const id = `u-${Date.now()}`;
+    const safeSuffix = cleanUsername.replace(/[^a-zA-Z0-9_-]/g, "");
+    const id = safeSuffix ? safeSuffix : String(Date.now());
+    const userActive = active !== void 0 ? Boolean(active) : true;
     const result = await pool.query(
       `INSERT INTO hospital_users (id, username, password, name, role, title_ar, active)
-       VALUES ($1, $2, $3, $4, $5, $6, true)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, username, name, role, title_ar, active, created_at`,
-      [id, cleanUsername, password || "123456", name.trim(), role || "Doctor", titleAr || role || "\u0637\u0627\u0642\u0645 \u0637\u0628\u064A"]
+      [id, cleanUsername, password ? password.trim() : "123456", name.trim(), role || "Doctor", titleAr || role || "\u0637\u0627\u0642\u0645 \u0637\u0628\u064A", userActive]
     );
     await logAudit(
       id,
@@ -934,7 +962,19 @@ app.post("/api/users", async (req, res) => {
       "Admin",
       "USERS"
     );
-    res.status(201).json({ success: true, user: result.rows[0] });
+    const newUser = result.rows[0];
+    res.status(201).json({
+      success: true,
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        name: newUser.name,
+        role: newUser.role,
+        titleAr: newUser.title_ar,
+        active: newUser.active,
+        createdAt: newUser.created_at
+      }
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -948,7 +988,7 @@ app.put("/api/users/:id", async (req, res) => {
       return res.status(404).json({ success: false, error: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" });
     }
     const currentUser = userCheck.rows[0];
-    if (currentUser.username === "admin" || id === "u-admin") {
+    if (currentUser.username === "admin" || id === "admin" || id === "u-admin") {
       if (active === false) {
         return res.status(400).json({ success: false, error: "\u0644\u0627 \u064A\u0645\u0643\u0646 \u062A\u0639\u0637\u064A\u0644 \u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0631\u0626\u064A\u0633\u064A" });
       }
@@ -998,7 +1038,19 @@ app.put("/api/users/:id", async (req, res) => {
       "Admin",
       "USERS"
     );
-    res.json({ success: true, user: result.rows[0] });
+    const updated = result.rows[0];
+    res.json({
+      success: true,
+      user: {
+        id: updated.id,
+        username: updated.username,
+        name: updated.name,
+        role: updated.role,
+        titleAr: updated.title_ar,
+        active: updated.active,
+        createdAt: updated.created_at
+      }
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -1006,7 +1058,7 @@ app.put("/api/users/:id", async (req, res) => {
 app.delete("/api/users/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    if (id === "u-admin") {
+    if (id === "admin" || id === "u-admin") {
       return res.status(400).json({ success: false, error: "\u0644\u0627 \u064A\u0645\u0643\u0646 \u062D\u0630\u0641 \u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0631\u0626\u064A\u0633\u064A" });
     }
     const check = await pool.query("SELECT username, name FROM hospital_users WHERE id = $1", [id]);
@@ -1028,6 +1080,62 @@ app.delete("/api/users/:id", async (req, res) => {
       "USERS"
     );
     res.json({ success: true, id });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ success: false, error: "\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631" });
+    }
+    const cleanUsername = String(username).trim().toLowerCase();
+    const cleanPassword = String(password).trim();
+    const result = await pool.query(
+      "SELECT id, username, password, name, role, title_ar, active FROM hospital_users WHERE LOWER(username) = $1",
+      [cleanUsername]
+    );
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629" });
+    }
+    const user = result.rows[0];
+    if (user.active === false) {
+      return res.status(403).json({ success: false, error: "\u062A\u0645 \u062A\u0639\u0637\u064A\u0644 \u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0646 \u0642\u0650\u0628\u0644 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0646\u0638\u0627\u0645. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0645\u0633\u0624\u0648\u0644." });
+    }
+    if (user.password !== cleanPassword) {
+      return res.status(401).json({ success: false, error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629" });
+    }
+    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
+    const logId = `log-${Date.now()}`;
+    await pool.query(
+      `INSERT INTO hospital_login_logs (id, username, user_name, role, ip, login_time)
+       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`,
+      [logId, user.username, user.name, user.role, ip]
+    ).catch(() => {
+    });
+    await logAudit(
+      "-",
+      "LOGIN",
+      user.name || user.username,
+      "-",
+      "-",
+      `\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644 \u0646\u0627\u062C\u062D \u0644\u0644\u0645\u0633\u062A\u062E\u062F\u0645 (${user.name}) \u0628\u062F\u0648\u0631 ${user.role} \u0639\u0628\u0631 IP: ${ip}`,
+      user.role,
+      "AUTH"
+    ).catch(() => {
+    });
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        titleAr: user.title_ar,
+        active: user.active
+      }
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -1070,6 +1178,76 @@ app.get("/api/users/login-logs", async (req, res) => {
         ip: r.ip,
         loginTime: r.login_time
       }))
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+app.get("/api/doctors", async (req, res) => {
+  try {
+    const docsRes = await pool.query("SELECT id, name, specialty, active, created_at FROM hospital_doctors WHERE active = true ORDER BY name ASC");
+    const doctorsList = docsRes.rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      specialty: r.specialty,
+      active: r.active,
+      createdAt: r.created_at
+    }));
+    const usersDocRes = await pool.query("SELECT username, name, title_ar FROM hospital_users WHERE role = 'Doctor' AND active = true");
+    const existingNames = new Set(doctorsList.map((d) => d.name.trim().toLowerCase()));
+    for (const u of usersDocRes.rows) {
+      if (u.name && !existingNames.has(u.name.trim().toLowerCase())) {
+        doctorsList.push({
+          id: `doc-${u.username}`,
+          name: u.name.trim(),
+          specialty: u.title_ar || "\u0637\u0628\u064A\u0628 \u0637\u0648\u0627\u0631\u0626",
+          active: true,
+          createdAt: (/* @__PURE__ */ new Date()).toISOString()
+        });
+        existingNames.add(u.name.trim().toLowerCase());
+      }
+    }
+    res.json({ success: true, doctors: doctorsList });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+app.post("/api/doctors", async (req, res) => {
+  try {
+    const { name, specialty } = req.body;
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ success: false, error: "\u0627\u0633\u0645 \u0627\u0644\u0637\u0628\u064A\u0628 \u0645\u0637\u0644\u0648\u0628" });
+    }
+    const cleanName = String(name).trim();
+    const cleanSpecialty = (specialty || "\u0637\u0628\u064A\u0628 \u0637\u0648\u0627\u0631\u0626").trim();
+    const existing = await pool.query("SELECT * FROM hospital_doctors WHERE LOWER(name) = LOWER($1)", [cleanName]);
+    if (existing.rows.length > 0) {
+      return res.json({
+        success: true,
+        doctor: {
+          id: existing.rows[0].id,
+          name: existing.rows[0].name,
+          specialty: existing.rows[0].specialty,
+          active: existing.rows[0].active
+        },
+        message: "\u0627\u0644\u0637\u0628\u064A\u0628 \u0645\u0633\u062C\u0644 \u0628\u0627\u0644\u0641\u0639\u0644 \u0645\u0633\u0628\u0642\u0627\u064B"
+      });
+    }
+    const id = `doc-${Date.now()}`;
+    const result = await pool.query(
+      `INSERT INTO hospital_doctors (id, name, specialty, active)
+       VALUES ($1, $2, $3, true)
+       RETURNING id, name, specialty, active, created_at`,
+      [id, cleanName, cleanSpecialty]
+    );
+    res.status(201).json({
+      success: true,
+      doctor: {
+        id: result.rows[0].id,
+        name: result.rows[0].name,
+        specialty: result.rows[0].specialty,
+        active: result.rows[0].active
+      }
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

@@ -63,10 +63,10 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ onClose, lang, fil
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-slate-200 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden my-auto">
         {/* Header */}
-        <div className="bg-slate-900 text-white p-4 px-6 flex items-center justify-between">
+        <div className="shrink-0 bg-slate-900 text-white p-4 px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-lg">
               <History className="w-5 h-5" />
@@ -82,14 +82,14 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ onClose, lang, fil
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Toolbar */}
-        <div className="p-4 border-b border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-3">
+        <div className="shrink-0 p-3 sm:p-4 border-b border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 flex-1 min-w-[240px]">
             <div className="relative flex-1">
               <Search className="w-4 h-4 text-slate-400 absolute start-3 top-1/2 -translate-y-1/2" />
@@ -182,11 +182,11 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ onClose, lang, fil
         </div>
 
         {/* Footer */}
-        <div className="p-3 px-6 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs text-slate-500">
+        <div className="shrink-0 p-3 sm:p-4 px-4 sm:px-6 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs text-slate-500">
           <span>{lang === 'ar' ? `عدد السجلات المعروضة: ${filteredLogs.length}` : `Showing ${filteredLogs.length} audit entries`}</span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-medium transition"
+            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-bold transition cursor-pointer"
           >
             {lang === 'ar' ? 'إغلاق' : 'Close'}
           </button>

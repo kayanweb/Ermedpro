@@ -547,7 +547,8 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
                     </tr>
                   ) : (
                     filteredUsers.map(u => {
-                      const isAdminAccount = u.username === 'admin' || u.id === 'u-admin';
+                      const isAdminAccount = u.username === 'admin' || u.id === 'admin' || u.id === 'u-admin';
+                      const displayId = (u.id || u.username).replace(/^u-?/i, '');
                       return (
                         <tr key={u.id || u.username} className="hover:bg-slate-50/70 transition">
                           {/* Staff Name & ID */}
@@ -575,7 +576,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-[10px] text-slate-400 font-mono mt-0.5">ID: {u.id || '-'}</p>
+                                <p className="text-[10px] text-slate-400 font-mono mt-0.5">ID: {displayId}</p>
                               </div>
                             </div>
                           </td>
@@ -774,9 +775,9 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
 
       {/* 1. Modal: Add New Account & User */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-right my-auto">
+            <div className="shrink-0 bg-slate-900 text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-xl">
                   <UserPlus className="w-5 h-5" />
@@ -791,6 +792,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setShowAddModal(false)}
                 className="text-slate-400 hover:text-white p-1 rounded-lg text-lg cursor-pointer"
               >
@@ -798,7 +800,8 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
               </button>
             </div>
 
-            <form onSubmit={handleSaveAdd} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleSaveAdd} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
               {formError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
@@ -815,7 +818,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
                   required
                   value={formName}
                   onChange={e => setFormName(e.target.value)}
-                  placeholder="مثال: د. طارق عبد العزيز"
+                  placeholder="مثال: د شيماء احمد السيد أو م. محمود عمر"
                   className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-hidden font-semibold text-slate-900"
                 />
               </div>
@@ -829,7 +832,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
                   required
                   value={formUsername}
                   onChange={e => setFormUsername(e.target.value)}
-                  placeholder="e.g. dr.tarek"
+                  placeholder="e.g. 20810 / nurse_er / doctor1"
                   className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-hidden font-mono font-bold text-slate-900"
                 />
                 <p className="text-[10px] text-slate-400 mt-1">
@@ -925,11 +928,14 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
                 </label>
               </div>
 
-              <div className="flex items-center gap-2 pt-3 border-t border-slate-200">
+              </div>
+
+              {/* Pinned Sticky Bottom Actions - Always visible on every screen */}
+              <div className="shrink-0 p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center gap-2">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
                 >
                   {isSubmitting ? (
                     <>
@@ -946,7 +952,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition cursor-pointer"
+                  className="py-2.5 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition cursor-pointer"
                 >
                   {t('cancel', lang)}
                 </button>
@@ -958,9 +964,9 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
 
       {/* 2. Modal: Edit User & Account */}
       {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-right my-auto">
+            <div className="shrink-0 bg-slate-900 text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-xl">
                   <Edit2 className="w-5 h-5" />
@@ -969,10 +975,13 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
                   <h3 className="font-black text-base">
                     {lang === 'ar' ? `تعديل الحساب (${editingUser.name})` : `Edit Account (${editingUser.name})`}
                   </h3>
-                  <p className="text-[11px] text-slate-400 font-mono">ID: {editingUser.id}</p>
+                  <p className="text-[11px] text-slate-400 font-mono">
+                    ID: {(editingUser.id || editingUser.username).replace(/^u-?/i, '')}
+                  </p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setEditingUser(null)}
                 className="text-slate-400 hover:text-white p-1 rounded-lg text-lg cursor-pointer"
               >
@@ -980,7 +989,8 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleSaveEdit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
               {formError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
@@ -1096,11 +1106,14 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
                 </label>
               </div>
 
-              <div className="flex items-center gap-2 pt-3 border-t border-slate-200">
+              </div>
+
+              {/* Pinned Sticky Bottom Actions - Always visible on every screen */}
+              <div className="shrink-0 p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center gap-2">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
                 >
                   {isSubmitting ? (
                     <>
@@ -1117,7 +1130,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition cursor-pointer"
+                  className="py-2.5 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition cursor-pointer"
                 >
                   {t('cancel', lang)}
                 </button>
@@ -1129,9 +1142,9 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
 
       {/* 3. Modal: Delete Account Confirmation (No window.confirm!) */}
       {userToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="bg-rose-600 text-white p-5 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-right my-auto">
+            <div className="shrink-0 bg-rose-600 text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-white/20 rounded-xl">
                   <ShieldAlert className="w-6 h-6 text-white" />
@@ -1146,6 +1159,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setUserToDelete(null)}
                 className="text-white/80 hover:text-white p-1 rounded-lg text-lg cursor-pointer"
               >
@@ -1153,7 +1167,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
               </button>
             </div>
 
-            <div className="p-6 space-y-4 text-xs">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
               <p className="text-slate-700 leading-relaxed text-sm">
                 {lang === 'ar' ? (
                   <>
@@ -1183,35 +1197,35 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
                     : 'This will permanently remove login credentials and account profile from Neon PostgreSQL.'}
                 </span>
               </div>
+            </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={handleConfirmDelete}
-                  className="flex-1 py-2.5 px-4 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>{lang === 'ar' ? 'جاري الحذف...' : 'Deleting...'}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="w-4 h-4" />
-                      <span>{lang === 'ar' ? 'نعم، حذف الحساب نهائياً' : 'Yes, Delete Permanently'}</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={() => setUserToDelete(null)}
-                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition cursor-pointer"
-                >
-                  {t('cancel', lang)}
-                </button>
-              </div>
+            <div className="shrink-0 p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center gap-2">
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={handleConfirmDelete}
+                className="flex-1 py-2.5 px-4 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>{lang === 'ar' ? 'جاري الحذف...' : 'Deleting...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>{lang === 'ar' ? 'نعم، حذف الحساب نهائياً' : 'Yes, Delete Permanently'}</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => setUserToDelete(null)}
+                className="py-2.5 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition cursor-pointer"
+              >
+                {t('cancel', lang)}
+              </button>
             </div>
           </div>
         </div>
@@ -1219,9 +1233,9 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
 
       {/* 4. Modal: Quick Reset Password */}
       {userToResetPassword && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="bg-purple-900 text-white p-5 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-right my-auto">
+            <div className="shrink-0 bg-purple-900 text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-purple-500/20 text-purple-300 rounded-xl">
                   <KeyRound className="w-5 h-5" />
@@ -1236,6 +1250,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setUserToResetPassword(null)}
                 className="text-purple-300 hover:text-white p-1 rounded-lg text-lg cursor-pointer"
               >
@@ -1243,53 +1258,56 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
               </button>
             </div>
 
-            <form onSubmit={handleSaveQuickPassword} className="p-6 space-y-4 text-xs">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-slate-700 font-bold">
-                    {lang === 'ar' ? 'كلمة المرور الجديدة *' : 'New Password *'}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$';
-                      let res = '';
-                      for (let i = 0; i < 8; i++) {
-                        res += chars.charAt(Math.floor(Math.random() * chars.length));
-                      }
-                      setNewQuickPassword(res);
-                      setShowQuickPasswordText(true);
-                    }}
-                    className="text-[11px] text-purple-600 hover:text-purple-800 font-bold cursor-pointer flex items-center gap-1"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    <span>{lang === 'ar' ? 'توليد كلمة سر عشوائية' : 'Generate'}</span>
-                  </button>
-                </div>
-                <div className="relative">
-                  <input
-                    type={showQuickPasswordText ? 'text' : 'password'}
-                    required
-                    value={newQuickPassword}
-                    onChange={e => setNewQuickPassword(e.target.value)}
-                    placeholder="اكتب كلمة المرور الجديدة..."
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-hidden font-mono font-bold text-slate-900 pe-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowQuickPasswordText(!showQuickPasswordText)}
-                    className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
-                  >
-                    {showQuickPasswordText ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+            <form onSubmit={handleSaveQuickPassword} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-slate-700 font-bold">
+                      {lang === 'ar' ? 'كلمة المرور الجديدة *' : 'New Password *'}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$';
+                        let res = '';
+                        for (let i = 0; i < 8; i++) {
+                          res += chars.charAt(Math.floor(Math.random() * chars.length));
+                        }
+                        setNewQuickPassword(res);
+                        setShowQuickPasswordText(true);
+                      }}
+                      className="text-[11px] text-purple-600 hover:text-purple-800 font-bold cursor-pointer flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>{lang === 'ar' ? 'توليد كلمة سر عشوائية' : 'Generate'}</span>
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showQuickPasswordText ? 'text' : 'password'}
+                      required
+                      value={newQuickPassword}
+                      onChange={e => setNewQuickPassword(e.target.value)}
+                      placeholder="اكتب كلمة المرور الجديدة..."
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-hidden font-mono font-bold text-slate-900 pe-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowQuickPasswordText(!showQuickPasswordText)}
+                      className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                    >
+                      {showQuickPasswordText ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-200">
+              {/* Pinned Sticky Bottom Actions - Always visible on every screen */}
+              <div className="shrink-0 p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center gap-2">
                 <button
                   type="submit"
                   disabled={isSubmitting || !newQuickPassword.trim()}
-                  className="flex-1 py-2.5 px-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 px-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
                 >
                   {isSubmitting ? (
                     <>
@@ -1306,7 +1324,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ lang, curr
                 <button
                   type="button"
                   onClick={() => setUserToResetPassword(null)}
-                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition cursor-pointer"
+                  className="py-2.5 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition cursor-pointer"
                 >
                   {t('cancel', lang)}
                 </button>

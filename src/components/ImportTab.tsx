@@ -3,6 +3,7 @@ import { DepartmentType, ERRecord } from '../types';
 import { REASONS, DEPARTMENTS, CONTRACT_TYPES, CAME_FROM_OPTIONS, SAMPLE_HIS_DATA, SAMPLE_SIMPLE_DATA } from '../constants';
 import { parseFullDateTime, toLocalDatetimeInput, calcMinutesDiff, fmtDateTime } from '../utils/dateTime';
 import { formatErrorMessage } from '../utils/errorUtils';
+import { DoctorSelect } from './DoctorSelect';
 import {
   UploadCloud,
   CheckCircle,
@@ -1349,16 +1350,17 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
 
       {/* 3. Comprehensive Edit Single Case Modal */}
       {editingCase && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden text-right">
-            <div className="bg-slate-800 text-white p-4 px-6 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden text-right my-auto">
+            <div className="shrink-0 bg-slate-800 text-white p-4 px-6 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Edit3 className="w-5 h-5 text-emerald-400" />
                 <h3 className="font-bold text-base">تعديل بيانات الحالة قبل اعتماد الحفظ</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setEditingCase(null)}
-                className="text-white/80 hover:text-white"
+                className="text-white/80 hover:text-white p-1 rounded-lg text-lg cursor-pointer"
               >
                 ✕
               </button>
@@ -1369,266 +1371,267 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
                 e.preventDefault();
                 handleUpdateStagedRow(editingCase);
               }}
-              className="p-6 space-y-4 text-xs"
+              className="flex-1 flex flex-col min-h-0 overflow-hidden"
             >
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">اسم المريض *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editingCase.name}
-                    onChange={e => setEditingCase({ ...editingCase, name: e.target.value })}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-semibold"
-                  />
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">اسم المريض *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingCase.name}
+                      onChange={e => setEditingCase({ ...editingCase, name: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">الرقم الطبي (MRN) *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingCase.medical}
+                      onChange={e => setEditingCase({ ...editingCase, medical: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-mono font-bold"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">الرقم الطبي (MRN) *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editingCase.medical}
-                    onChange={e => setEditingCase({ ...editingCase, medical: e.target.value })}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-mono font-bold"
-                  />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">وقت طلب النقل (Order Time) *</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={editingCase.order}
-                    onChange={e => {
-                      const newOrder = e.target.value;
-                      const delay = editingCase.actual ? calcMinutesDiff(newOrder, editingCase.actual) : null;
-                      setEditingCase({ ...editingCase, order: newOrder, delay });
-                    }}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">
-                    وقت النقل الفعلي (Actual Exit)
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={editingCase.actual || ''}
-                    onChange={e => {
-                      const newActual = e.target.value;
-                      const delay = newActual ? calcMinutesDiff(editingCase.order, newActual) : null;
-                      setEditingCase({
-                        ...editingCase,
-                        actual: newActual || undefined,
-                        delay,
-                        status: newActual ? 'Transferred' : 'Pending',
-                      });
-                    }}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-mono"
-                  />
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() =>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">وقت طلب النقل (Order Time) *</label>
+                    <input
+                      type="datetime-local"
+                      required
+                      value={editingCase.order}
+                      onChange={e => {
+                        const newOrder = e.target.value;
+                        const delay = editingCase.actual ? calcMinutesDiff(newOrder, editingCase.actual) : null;
+                        setEditingCase({ ...editingCase, order: newOrder, delay });
+                      }}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">
+                      وقت النقل الفعلي (Actual Exit)
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={editingCase.actual || ''}
+                      onChange={e => {
+                        const newActual = e.target.value;
+                        const delay = newActual ? calcMinutesDiff(editingCase.order, newActual) : null;
                         setEditingCase({
                           ...editingCase,
-                          actual: undefined,
-                          delay: null,
-                          status: 'Pending',
-                        })
-                      }
-                      className="text-[11px] text-amber-700 hover:underline"
-                    >
-                      تعيين كحالة قيد الانتظار (بدون وقت خروج)
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Calculated Delay Box */}
-              <div className="p-3 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-between">
-                <span className="font-semibold text-slate-700">التأخير المحسوب للحالة:</span>
-                <div>
-                  {editingCase.delay !== null && editingCase.delay !== undefined ? (
-                    <span
-                      className={`px-3 py-1 rounded-full font-bold font-mono text-xs ${
-                        editingCase.delay > 60
-                          ? 'bg-red-100 text-red-800'
-                          : editingCase.delay > 30
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-emerald-100 text-emerald-800'
-                      }`}
-                    >
-                      {editingCase.delay} دقيقة {editingCase.delay > 60 ? '(تأخير حرج)' : '(نقل قياسي)'}
-                    </span>
-                  ) : (
-                    <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-sm">
-                      قيد الانتظار في طوارئ المستشفى
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">القسم المستهدف *</label>
-                  <select
-                    value={editingCase.dept}
-                    onChange={e => setEditingCase({ ...editingCase, dept: e.target.value })}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-semibold"
-                  >
-                    <option value="Inpatient">الأقسام الداخلية (Inpatient)</option>
-                    <option value="ICU">العناية المركزة (ICU)</option>
-                    <option value="Intermediate">الرعاية المتوسطة (Intermediate)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">رقم السرير المخصص (اختياري)</label>
-                  <input
-                    type="text"
-                    value={editingCase.bedNumber || ''}
-                    onChange={e => setEditingCase({ ...editingCase, bedNumber: e.target.value })}
-                    placeholder="مثال: ICU-B02"
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-mono"
-                  />
-                </div>
-              </div>
-
-              {/* Hospital Administrative Fields: Contract, Came From, Visit No, Doctor */}
-              <div className="p-3 bg-purple-50/50 rounded-xl border border-purple-200/80 space-y-3">
-                <div className="font-bold text-purple-900 text-xs flex items-center gap-1.5">
-                  <CreditCard className="w-3.5 h-3.5 text-purple-700" />
-                  <span>بيانات التعاقد وحقول المستشفى الإدارية</span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-slate-700 font-bold">جهة التعاقد (الجهة المالية) *</label>
+                          actual: newActual || undefined,
+                          delay,
+                          status: newActual ? 'Transferred' : 'Pending',
+                        });
+                      }}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-mono"
+                    />
+                    <div className="mt-1 flex items-center gap-1.5">
                       <button
                         type="button"
-                        onClick={() => {
-                          const isPreset = CONTRACT_TYPES.some(c => c.nameAr === editingCase.contract);
-                          if (isPreset) {
-                            setEditingCase({ ...editingCase, contract: '' });
-                          } else {
-                            setEditingCase({ ...editingCase, contract: 'طوارئ المستشفى' });
-                          }
-                        }}
-                        className="text-xs text-purple-600 hover:text-purple-800 font-bold cursor-pointer"
+                        onClick={() =>
+                          setEditingCase({
+                            ...editingCase,
+                            actual: undefined,
+                            delay: null,
+                            status: 'Pending',
+                          })
+                        }
+                        className="text-[11px] text-amber-700 hover:underline cursor-pointer"
                       >
-                        ✏️ كتابة يدوية / قائمة
+                        تعيين كحالة قيد الانتظار (بدون وقت خروج)
                       </button>
                     </div>
-                    <select
-                      value={CONTRACT_TYPES.some(c => c.nameAr === editingCase.contract) ? editingCase.contract : 'other'}
-                      onChange={e => {
-                        if (e.target.value === 'other') {
-                          setEditingCase({ ...editingCase, contract: '' });
-                        } else {
-                          setEditingCase({ ...editingCase, contract: e.target.value });
-                        }
-                      }}
-                      className="w-full p-2.5 bg-white border border-slate-300 rounded-lg focus:border-purple-500 outline-hidden font-semibold"
-                    >
-                      {CONTRACT_TYPES.map(c => (
-                        <option key={c.id} value={c.id === 'other' ? 'other' : c.nameAr}>
-                          {c.nameAr}
-                        </option>
-                      ))}
-                    </select>
-                    {!CONTRACT_TYPES.some(c => c.nameAr === editingCase.contract) && (
-                      <input
-                        type="text"
-                        value={editingCase.contract || ''}
-                        onChange={e => setEditingCase({ ...editingCase, contract: e.target.value })}
-                        placeholder="اكتب اسم جهة التعاقد يدوياً..."
-                        className="w-full mt-1.5 p-2 bg-purple-50/40 border border-purple-300 rounded-lg font-semibold text-slate-900 outline-none"
-                      />
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-slate-700 font-bold mb-1">من أين (طريقة الحضور)</label>
-                    <select
-                      value={editingCase.cameFrom || 'من المنزل'}
-                      onChange={e => setEditingCase({ ...editingCase, cameFrom: e.target.value })}
-                      className="w-full p-2.5 bg-white border border-slate-300 rounded-lg focus:border-purple-500 outline-hidden font-semibold"
-                    >
-                      {CAME_FROM_OPTIONS.map((c, i) => (
-                        <option key={i} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                {/* Calculated Delay Box */}
+                <div className="p-3 rounded-xl bg-slate-100 border border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-semibold text-slate-700">التأخير المحسوب للحالة:</span>
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">رقم الزيارة (Visit No)</label>
-                    <input
-                      type="text"
-                      value={editingCase.visitNo || ''}
-                      onChange={e => setEditingCase({ ...editingCase, visitNo: e.target.value })}
-                      placeholder="مثال: V-2025-0891"
-                      className="w-full p-2.5 bg-white border border-slate-300 rounded-lg focus:border-purple-500 outline-hidden font-mono"
-                    />
+                    {editingCase.delay !== null && editingCase.delay !== undefined ? (
+                      <span
+                        className={`px-3 py-1 rounded-full font-bold font-mono text-xs ${
+                          editingCase.delay > 60
+                            ? 'bg-red-100 text-red-800'
+                            : editingCase.delay > 30
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}
+                      >
+                        {editingCase.delay} دقيقة {editingCase.delay > 60 ? '(تأخير حرج)' : '(نقل قياسي)'}
+                      </span>
+                    ) : (
+                      <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-sm">
+                        قيد الانتظار في طوارئ المستشفى
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">القسم المستهدف *</label>
+                    <select
+                      value={editingCase.dept}
+                      onChange={e => setEditingCase({ ...editingCase, dept: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-semibold"
+                    >
+                      <option value="Inpatient">الأقسام الداخلية (Inpatient)</option>
+                      <option value="ICU">العناية المركزة (ICU)</option>
+                      <option value="Intermediate">الرعاية المتوسطة (Intermediate)</option>
+                    </select>
                   </div>
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">اسم الطبيب المعالج</label>
+                    <label className="block text-slate-700 font-bold mb-1">رقم السرير المخصص (اختياري)</label>
                     <input
                       type="text"
-                      value={editingCase.doctorName || ''}
-                      onChange={e => setEditingCase({ ...editingCase, doctorName: e.target.value })}
-                      placeholder="اسم الطبيب"
-                      className="w-full p-2.5 bg-white border border-slate-300 rounded-lg focus:border-purple-500 outline-hidden font-semibold"
+                      value={editingCase.bedNumber || ''}
+                      onChange={e => setEditingCase({ ...editingCase, bedNumber: e.target.value })}
+                      placeholder="مثال: ICU-B02"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* Hospital Administrative Fields: Contract, Came From, Visit No, Doctor */}
+                <div className="p-3 bg-purple-50/50 rounded-xl border border-purple-200/80 space-y-3">
+                  <div className="font-bold text-purple-900 text-xs flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-purple-700" />
+                    <span>بيانات التعاقد وحقول المستشفى الإدارية</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-slate-700 font-bold">جهة التعاقد (الجهة المالية) *</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const isPreset = CONTRACT_TYPES.some(c => c.nameAr === editingCase.contract);
+                            if (isPreset) {
+                              setEditingCase({ ...editingCase, contract: '' });
+                            } else {
+                              setEditingCase({ ...editingCase, contract: 'طوارئ المستشفى' });
+                            }
+                          }}
+                          className="text-xs text-purple-600 hover:text-purple-800 font-bold cursor-pointer"
+                        >
+                          ✏️ كتابة يدوية / قائمة
+                        </button>
+                      </div>
+                      <select
+                        value={CONTRACT_TYPES.some(c => c.nameAr === editingCase.contract) ? editingCase.contract : 'other'}
+                        onChange={e => {
+                          if (e.target.value === 'other') {
+                            setEditingCase({ ...editingCase, contract: '' });
+                          } else {
+                            setEditingCase({ ...editingCase, contract: e.target.value });
+                          }
+                        }}
+                        className="w-full p-2.5 bg-white border border-slate-300 rounded-lg focus:border-purple-500 outline-hidden font-semibold"
+                      >
+                        {CONTRACT_TYPES.map(c => (
+                          <option key={c.id} value={c.id === 'other' ? 'other' : c.nameAr}>
+                            {c.nameAr}
+                          </option>
+                        ))}
+                      </select>
+                      {!CONTRACT_TYPES.some(c => c.nameAr === editingCase.contract) && (
+                        <input
+                          type="text"
+                          value={editingCase.contract || ''}
+                          onChange={e => setEditingCase({ ...editingCase, contract: e.target.value })}
+                          placeholder="اكتب اسم جهة التعاقد يدوياً..."
+                          className="w-full mt-1.5 p-2 bg-purple-50/40 border border-purple-300 rounded-lg font-semibold text-slate-900 outline-none"
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">من أين (طريقة الحضور)</label>
+                      <select
+                        value={editingCase.cameFrom || 'من المنزل'}
+                        onChange={e => setEditingCase({ ...editingCase, cameFrom: e.target.value })}
+                        className="w-full p-2.5 bg-white border border-slate-300 rounded-lg focus:border-purple-500 outline-hidden font-semibold"
+                      >
+                        {CAME_FROM_OPTIONS.map((c, i) => (
+                          <option key={i} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">رقم الزيارة (Visit No)</label>
+                      <input
+                        type="text"
+                        value={editingCase.visitNo || ''}
+                        onChange={e => setEditingCase({ ...editingCase, visitNo: e.target.value })}
+                        placeholder="مثال: V-2025-0891"
+                        className="w-full p-2.5 bg-white border border-slate-300 rounded-lg focus:border-purple-500 outline-hidden font-mono"
+                      />
+                    </div>
+                    <div>
+                      <DoctorSelect
+                        showLabel
+                        label="اسم الطبيب المعالج"
+                        value={editingCase.doctorName || ''}
+                        onChange={docName => setEditingCase({ ...editingCase, doctorName: docName })}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">التشخيص الطبي الأولي</label>
+                    <input
+                      type="text"
+                      value={editingCase.diagnosis || ''}
+                      onChange={e => setEditingCase({ ...editingCase, diagnosis: e.target.value })}
+                      placeholder="التشخيص المبدئي للحالة..."
+                      className="w-full p-2.5 bg-white border border-slate-300 rounded-lg focus:border-purple-500 outline-hidden"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">التشخيص الطبي الأولي</label>
-                  <input
-                    type="text"
-                    value={editingCase.diagnosis || ''}
-                    onChange={e => setEditingCase({ ...editingCase, diagnosis: e.target.value })}
-                    placeholder="التشخيص المبدئي للحالة..."
-                    className="w-full p-2.5 bg-white border border-slate-300 rounded-lg focus:border-purple-500 outline-hidden"
+                  <label className="block text-slate-700 font-bold mb-1">سبب التأخير</label>
+                  <select
+                    value={editingCase.reason}
+                    onChange={e => setEditingCase({ ...editingCase, reason: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-semibold"
+                  >
+                    {REASONS.map(r => (
+                      <option key={r.code} value={r.code}>
+                        {r.code} - {r.textAr}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">الملاحظات</label>
+                  <textarea
+                    rows={2}
+                    value={editingCase.notes}
+                    onChange={e => setEditingCase({ ...editingCase, notes: e.target.value })}
+                    className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">سبب التأخير</label>
-                <select
-                  value={editingCase.reason}
-                  onChange={e => setEditingCase({ ...editingCase, reason: e.target.value })}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-semibold"
-                >
-                  {REASONS.map(r => (
-                    <option key={r.code} value={r.code}>
-                      {r.code} - {r.textAr}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">الملاحظات</label>
-                <textarea
-                  rows={2}
-                  value={editingCase.notes}
-                  onChange={e => setEditingCase({ ...editingCase, notes: e.target.value })}
-                  className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+              {/* Pinned Sticky Bottom Actions - Always visible on every screen */}
+              <div className="shrink-0 p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center gap-2">
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                 >
                   <Check className="w-4 h-4" />
                   <span>تأكيد وحفظ التعديلات في جدول المعاينة</span>
@@ -1636,7 +1639,7 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
                 <button
                   type="button"
                   onClick={() => setEditingCase(null)}
-                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition"
+                  className="py-2.5 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition cursor-pointer"
                 >
                   إلغاء
                 </button>
@@ -1648,22 +1651,23 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
 
       {/* 4. Final Review & Confirmation Dialog Before Committing */}
       {showConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden text-right">
-            <div className="bg-emerald-700 text-white p-4 px-6 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden text-right my-auto">
+            <div className="shrink-0 bg-emerald-700 text-white p-4 px-6 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-emerald-200" />
                 <h3 className="font-bold text-base">تأكيد اعتماد ونقل الحالات إلى شيت ER</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setShowConfirmModal(false)}
-                className="text-white/80 hover:text-white"
+                className="text-white/80 hover:text-white p-1 rounded-lg text-lg cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-6 space-y-4 text-xs">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
               <p className="text-slate-700 leading-relaxed">
                 أنت على وشك اعتماد وتوثيق الحالات المحددة في شيت الطوارئ الرسمي وقاعدة بيانات Neon السحابية.
               </p>
@@ -1692,24 +1696,24 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
                   </span>
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={handleFinalCommit}
-                  className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer"
-                >
-                  <CheckCircle className="w-5 h-5" />
-                  <span>تأكيد الاعتماد والنقل المباشر للشيت</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmModal(false)}
-                  className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition"
-                >
-                  متابعة التعديل
-                </button>
-              </div>
+            <div className="shrink-0 p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleFinalCommit}
+                className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer"
+              >
+                <CheckCircle className="w-5 h-5" />
+                <span>تأكيد الاعتماد والنقل المباشر للشيت</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="py-3 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition cursor-pointer"
+              >
+                متابعة التعديل
+              </button>
             </div>
           </div>
         </div>

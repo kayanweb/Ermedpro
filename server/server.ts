@@ -158,13 +158,42 @@ async function initDatabase() {
       await pool.query(`
         INSERT INTO hospital_users (id, username, password, name, role, title_ar, active)
         VALUES
-          ('u-admin', 'admin', 'admin123', 'د. مروان البدري', 'Admin', 'مدير الطوارئ ومسؤول النظام', true),
-          ('u-dr-ahmed', 'dr.ahmed', 'doc123', 'د. أحمد سليمان', 'Doctor', 'استشاري طب الطوارئ', true),
-          ('u-nurse-sara', 'nurse.sara', 'nurse123', 'م. سارة محمود', 'Nurse', 'مشرفة تمريض الطوارئ', true),
-          ('u-viewer-mohamed', 'viewer', 'view123', 'أ. محمد كامل', 'Viewer', 'مراقب جودة وإحصاء (للقراءة فقط)', true)
+          ('admin', 'admin', '123', 'د شيماء احمد السيد', 'Admin', 'Nurse director', true),
+          ('20810', '20810', '123', 'م. محمود عمر', 'Nurse', 'مشرف تمريض الطوارئ', true),
+          ('21094', '21094', '123', 'MOHAMED ELSAYED ABD ALLAH', 'Admin', 'Admin', true)
         ON CONFLICT (username) DO NOTHING;
       `);
+    } else {
+      // Auto-migrate any legacy user IDs: strip u- prefix and match username cleanly
+      await pool.query(`
+        UPDATE hospital_users SET id = REGEXP_REPLACE(id, '^u-', '') WHERE id LIKE 'u-%';
+        UPDATE hospital_users SET id = 'admin' WHERE username = 'admin' AND id != 'admin';
+        UPDATE hospital_users SET id = '20810' WHERE username = '20810' AND id != '20810';
+        UPDATE hospital_users SET id = '21094' WHERE username = '21094' AND id != '21094';
+      `);
     }
+
+    // 2.5 Doctors Table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS hospital_doctors (
+        id VARCHAR(128) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        specialty VARCHAR(150) DEFAULT 'طوارئ',
+        active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      INSERT INTO hospital_doctors (id, name, specialty)
+      VALUES
+        ('doc-1', 'د شيماء احمد السيد', 'طوارئ / Nurse director'),
+        ('doc-2', 'MOHAMED ELSAYED ABD ALLAH', 'استشاري طوارئ'),
+        ('doc-3', 'م. محمود عمر', 'مشرف طوارئ'),
+        ('doc-4', 'د. أحمد مصطفى', 'أخصائي طوارئ'),
+        ('doc-5', 'د. سارة إبراهيم', 'طبيب مقيم طوارئ'),
+        ('doc-6', 'د. محمد خالد', 'أخصائي عظام طوارئ'),
+        ('doc-7', 'د. ريم عبد العزيز', 'أخصائي باطنة طوارئ')
+      ON CONFLICT (id) DO NOTHING;
+    `);
 
     // 3. Login Logs Table
     await pool.query(`
@@ -1060,7 +1089,7 @@ app.get('/api/users', async (req: Request, res: Response) => {
 // POST create user
 app.post('/api/users', async (req: Request, res: Response) => {
   try {
-    const { username, password, name, role, titleAr } = req.body;
+    const { username, password, name, role, titleAr, active } = req.body;
     if (!username || !name) {
       return res.status(400).json({ success: false, error: 'اسم المستخدم والاسم الكامل مطلوبان' });
     }
@@ -1071,12 +1100,14 @@ app.post('/api/users', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'اسم المستخدم هذا مسجل مسبقاً، يرجى اختيار اسم مستخدم آخر' });
     }
 
-    const id = `u-${Date.now()}`;
+    const safeSuffix = cleanUsername.replace(/[^a-zA-Z0-9_-]/g, '');
+    const id = safeSuffix ? safeSuffix : String(Date.now());
+    const userActive = active !== undefined ? Boolean(active) : true;
     const result = await pool.query(
       `INSERT INTO hospital_users (id, username, password, name, role, title_ar, active)
-       VALUES ($1, $2, $3, $4, $5, $6, true)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, username, name, role, title_ar, active, created_at`,
-      [id, cleanUsername, password || '123456', name.trim(), role || 'Doctor', titleAr || role || 'طاقم طبي']
+      [id, cleanUsername, password ? password.trim() : '123456', name.trim(), role || 'Doctor', titleAr || role || 'طاقم طبي', userActive]
     );
 
     // Audit log
@@ -1091,7 +1122,19 @@ app.post('/api/users', async (req: Request, res: Response) => {
       'USERS'
     );
 
-    res.status(201).json({ success: true, user: result.rows[0] });
+    const newUser = result.rows[0];
+    res.status(201).json({
+      success: true,
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        name: newUser.name,
+        role: newUser.role,
+        titleAr: newUser.title_ar,
+        active: newUser.active,
+        createdAt: newUser.created_at,
+      },
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -1111,7 +1154,7 @@ app.put('/api/users/:id', async (req: Request, res: Response) => {
     const currentUser = userCheck.rows[0];
 
     // Primary admin protections
-    if (currentUser.username === 'admin' || id === 'u-admin') {
+    if (currentUser.username === 'admin' || id === 'admin' || id === 'u-admin') {
       if (active === false) {
         return res.status(400).json({ success: false, error: 'لا يمكن تعطيل حساب المسؤول الرئيسي' });
       }
@@ -1169,7 +1212,19 @@ app.put('/api/users/:id', async (req: Request, res: Response) => {
       'USERS'
     );
 
-    res.json({ success: true, user: result.rows[0] });
+    const updated = result.rows[0];
+    res.json({
+      success: true,
+      user: {
+        id: updated.id,
+        username: updated.username,
+        name: updated.name,
+        role: updated.role,
+        titleAr: updated.title_ar,
+        active: updated.active,
+        createdAt: updated.created_at,
+      },
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -1179,7 +1234,7 @@ app.put('/api/users/:id', async (req: Request, res: Response) => {
 app.delete('/api/users/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    if (id === 'u-admin') {
+    if (id === 'admin' || id === 'u-admin') {
       return res.status(400).json({ success: false, error: 'لا يمكن حذف حساب المسؤول الرئيسي' });
     }
     const check = await pool.query('SELECT username, name FROM hospital_users WHERE id = $1', [id]);
@@ -1204,6 +1259,70 @@ app.delete('/api/users/:id', async (req: Request, res: Response) => {
     );
 
     res.json({ success: true, id });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST login authentication (database verification)
+app.post('/api/auth/login', async (req: Request, res: Response) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ success: false, error: 'يرجى إدخال اسم المستخدم وكلمة المرور' });
+    }
+
+    const cleanUsername = String(username).trim().toLowerCase();
+    const cleanPassword = String(password).trim();
+
+    const result = await pool.query(
+      'SELECT id, username, password, name, role, title_ar, active FROM hospital_users WHERE LOWER(username) = $1',
+      [cleanUsername]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
+    }
+
+    const user = result.rows[0];
+    if (user.active === false) {
+      return res.status(403).json({ success: false, error: 'تم تعطيل هذا الحساب من قِبل إدارة النظام. يرجى التواصل مع المسؤول.' });
+    }
+
+    if (user.password !== cleanPassword) {
+      return res.status(401).json({ success: false, error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
+    }
+
+    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+    const logId = `log-${Date.now()}`;
+    await pool.query(
+      `INSERT INTO hospital_login_logs (id, username, user_name, role, ip, login_time)
+       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`,
+      [logId, user.username, user.name, user.role, ip]
+    ).catch(() => {});
+
+    await logAudit(
+      '-',
+      'LOGIN',
+      user.name || user.username,
+      '-',
+      '-',
+      `تسجيل دخول ناجح للمستخدم (${user.name}) بدور ${user.role} عبر IP: ${ip}`,
+      user.role,
+      'AUTH'
+    ).catch(() => {});
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        titleAr: user.title_ar,
+        active: user.active,
+      },
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -1253,6 +1372,89 @@ app.get('/api/users/login-logs', async (req: Request, res: Response) => {
         ip: r.ip,
         loginTime: r.login_time,
       })),
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==========================================
+// DOCTORS MANAGEMENT ENDPOINTS
+// ==========================================
+app.get('/api/doctors', async (req: Request, res: Response) => {
+  try {
+    const docsRes = await pool.query('SELECT id, name, specialty, active, created_at FROM hospital_doctors WHERE active = true ORDER BY name ASC');
+    const doctorsList = docsRes.rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      specialty: r.specialty,
+      active: r.active,
+      createdAt: r.created_at,
+    }));
+
+    // Ensure any doctors from users with role Doctor are included
+    const usersDocRes = await pool.query("SELECT username, name, title_ar FROM hospital_users WHERE role = 'Doctor' AND active = true");
+    const existingNames = new Set(doctorsList.map(d => d.name.trim().toLowerCase()));
+
+    for (const u of usersDocRes.rows) {
+      if (u.name && !existingNames.has(u.name.trim().toLowerCase())) {
+        doctorsList.push({
+          id: `doc-${u.username}`,
+          name: u.name.trim(),
+          specialty: u.title_ar || 'طبيب طوارئ',
+          active: true,
+          createdAt: new Date().toISOString(),
+        });
+        existingNames.add(u.name.trim().toLowerCase());
+      }
+    }
+
+    res.json({ success: true, doctors: doctorsList });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/doctors', async (req: Request, res: Response) => {
+  try {
+    const { name, specialty } = req.body;
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ success: false, error: 'اسم الطبيب مطلوب' });
+    }
+    const cleanName = String(name).trim();
+    const cleanSpecialty = (specialty || 'طبيب طوارئ').trim();
+
+    // Check if doctor with similar name already exists
+    const existing = await pool.query('SELECT * FROM hospital_doctors WHERE LOWER(name) = LOWER($1)', [cleanName]);
+    if (existing.rows.length > 0) {
+      return res.json({
+        success: true,
+        doctor: {
+          id: existing.rows[0].id,
+          name: existing.rows[0].name,
+          specialty: existing.rows[0].specialty,
+          active: existing.rows[0].active,
+        },
+        message: 'الطبيب مسجل بالفعل مسبقاً',
+      });
+    }
+
+    const id = `doc-${Date.now()}`;
+    const result = await pool.query(
+      `INSERT INTO hospital_doctors (id, name, specialty, active)
+       VALUES ($1, $2, $3, true)
+       RETURNING id, name, specialty, active, created_at`,
+      [id, cleanName, cleanSpecialty]
+    );
+
+    res.status(201).json({
+      success: true,
+      doctor: {
+        id: result.rows[0].id,
+        name: result.rows[0].name,
+        specialty: result.rows[0].specialty,
+        active: result.rows[0].active,
+      },
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });

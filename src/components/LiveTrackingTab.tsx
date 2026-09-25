@@ -116,7 +116,17 @@ export const LiveTrackingTab: React.FC<LiveTrackingTabProps> = ({
       `📝 *السبب:* ${rec.notes || rec.reason || 'انتظار تجهيز السرير'}\n` +
       `يرجى التنسيق الفوري لاستقبال الحالة.`
     );
-    window.open(`https://wa.me/?text=${text}`, '_blank');
+    const link = document.createElement('a');
+    link.href = `https://wa.me/?text=${text}`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      if (document.body.contains(link)) {
+        document.body.removeChild(link);
+      }
+    }, 100);
   };
 
   const handleTransfer = async (id: string) => {

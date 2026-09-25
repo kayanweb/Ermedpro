@@ -442,9 +442,10 @@ export default function App() {
         />
       </div>
 
-      {/* Navigation Tabs Bar */}
-      <div className="no-print">
+      {/* Mobile & Tablet Horizontal Navigation Tabs Bar (< lg screens) */}
+      <div className="lg:hidden no-print">
         <TabsNav
+          variant="horizontal"
           activeTab={activeTab}
           onTabChange={tab => {
             setActiveTab(tab);
@@ -458,8 +459,27 @@ export default function App() {
         />
       </div>
 
-      {/* Main Container */}
-      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 pt-6 flex-1">
+      {/* Main Workspace Layout (Desktop Sidebar on the right in RTL, and Main Content) */}
+      <div className="w-full max-w-[1720px] mx-auto px-3 sm:px-6 pt-4 sm:pt-6 flex-1 flex flex-col lg:flex-row gap-5 items-start">
+        {/* Desktop Sidebar Navigation (Visible on computer and large screens >= lg) */}
+        <aside className="hidden lg:block shrink-0 no-print">
+          <TabsNav
+            variant="sidebar"
+            activeTab={activeTab}
+            onTabChange={tab => {
+              setActiveTab(tab);
+              if (tab !== 'report') setDeptFilterFromDash('');
+            }}
+            userRole={currentUser.role}
+            pendingCount={pendingCount}
+            criticalCount={criticalCount}
+            availableBedsCount={availableBedsCount}
+            lang={lang}
+          />
+        </aside>
+
+        {/* Main Content Area */}
+        <main className="flex-1 min-w-0 w-full">
         {isLoading ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-xs">
             <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -581,25 +601,26 @@ export default function App() {
             )}
           </>
         )}
-      </main>
+        </main>
+      </div>
 
       {/* Quick Transfer Completion Dialog */}
       {quickTransferRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden">
-            <div className="bg-emerald-700 text-white p-4 px-6 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden my-auto">
+            <div className="shrink-0 bg-emerald-700 text-white p-4 px-6 flex items-center justify-between">
               <h3 className="font-bold text-base">
                 {lang === 'ar' ? 'تأكيد إتمام النقل الفعلي للمريض' : 'Confirm Patient Transfer Completion'}
               </h3>
               <button
                 onClick={() => setQuickTransferRecord(null)}
-                className="text-white/80 hover:text-white"
+                className="text-white/80 hover:text-white p-1 rounded-lg cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-6 space-y-4 text-xs">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
                 <p className="font-bold text-slate-900 text-sm">{quickTransferRecord.name}</p>
                 <p className="font-mono text-emerald-700">MRN: {quickTransferRecord.medical}</p>
@@ -641,26 +662,27 @@ export default function App() {
                   className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-hidden"
                 />
               </div>
+            </div>
 
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={handleConfirmQuickTransfer}
-                  disabled={isSubmittingTransfer}
-                  className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition"
-                >
-                  {isSubmittingTransfer
-                    ? (lang === 'ar' ? 'جاري التوثيق في Neon...' : 'Saving to Neon...')
-                    : (lang === 'ar' ? 'تأكيد وحفظ النقل الفعلي' : 'Confirm & Save')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setQuickTransferRecord(null)}
-                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition"
-                >
-                  {t('cancel', lang)}
-                </button>
-              </div>
+            {/* Pinned Sticky Bottom Actions - Always visible on every screen */}
+            <div className="shrink-0 p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleConfirmQuickTransfer}
+                disabled={isSubmittingTransfer}
+                className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition cursor-pointer shadow-xs text-xs"
+              >
+                {isSubmittingTransfer
+                  ? (lang === 'ar' ? 'جاري التوثيق في Neon...' : 'Saving to Neon...')
+                  : (lang === 'ar' ? 'تأكيد وحفظ النقل الفعلي' : 'Confirm & Save')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setQuickTransferRecord(null)}
+                className="py-2.5 px-4 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl transition cursor-pointer text-xs"
+              >
+                {t('cancel', lang)}
+              </button>
             </div>
           </div>
         </div>
