@@ -1,7 +1,7 @@
 {
   "functions": {
-    "api/index.ts": {
-      "includeFiles": "server/**"
+    "api/*.ts": {
+      "includeFiles": "{server/**,server.ts}"
     }
   },
   "rewrites": [
