@@ -1,13 +1,8 @@
 {
-  "functions": {
-    "api/*.ts": {
-      "includeFiles": "{server/**,server.ts}"
-    }
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api"
+      "destination": "/api?__vpath=$1"
     },
     {
       "source": "/(.*)",
@@ -15,3 +10,4 @@
     }
   ]
 }
+

@@ -52,11 +52,17 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // URL normalization middleware for Vercel Serverless Functions and reverse proxies
 app.use((req: Request, res: Response, next: NextFunction) => {
-  const forwardedUri = (req.headers['x-forwarded-uri'] || req.headers['x-matched-path']) as string | undefined;
-  if (forwardedUri && forwardedUri.startsWith('/api') && req.url === '/api') {
-    req.url = forwardedUri;
-  } else if (!req.url.startsWith('/api') && !req.url.startsWith('/assets') && req.url !== '/' && !req.url.startsWith('/index.html')) {
-    req.url = '/api' + (req.url.startsWith('/') ? req.url : '/' + req.url);
+  // Support Vercel query rewrite (e.g. /api?__vpath=records or /api?__vpath=beds)
+  const vpath = (req.query?.__vpath || (req.url.includes('__vpath=') ? new URL(req.url, 'http://localhost').searchParams.get('__vpath') : null)) as string | null;
+  if (vpath) {
+    const cleanUrl = req.url.replace(/[?&]__vpath=[^&]*/, '').replace(/\?$/, '');
+    const searchPart = cleanUrl.includes('?') ? cleanUrl.substring(cleanUrl.indexOf('?')) : '';
+    req.url = '/api/' + vpath.replace(/^\/+/, '') + searchPart;
+  } else {
+    const forwardedUri = (req.headers['x-forwarded-uri'] || req.headers['x-matched-path']) as string | undefined;
+    if (forwardedUri && forwardedUri.startsWith('/api') && (req.url === '/api' || req.url === '/')) {
+      req.url = forwardedUri;
+    }
   }
   next();
 });
@@ -387,6 +393,16 @@ function mapRowToRecord(row: any) {
 // ==========================================
 // API ROUTES
 // ==========================================
+
+// Root API Health and Info
+app.get(['/api', '/api/'], (req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    message: 'ER Med Pro API is operational',
+    timestamp: new Date().toISOString(),
+    endpoints: ['/api/health', '/api/records', '/api/beds', '/api/users', '/api/analytics/advanced'],
+  });
+});
 
 // Health & DB Status
 app.get('/api/health', async (req: Request, res: Response) => {
@@ -1737,6 +1753,16 @@ async function startServer() {
   });
 }
 
-startServer();
+// Only start listening when this script is run directly (local development or standalone node server)
+const isServerlessRuntime =
+  process.env.VERCEL === '1' ||
+  Boolean(process.env.VERCEL) ||
+  Boolean(process.env.VERCEL_ENV) ||
+  Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
+  Boolean(process.env.NOW_REGION);
+
+if (!isServerlessRuntime) {
+  startServer();
+}
 
 export default app;
