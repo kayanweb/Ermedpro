@@ -2,8 +2,144 @@ import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
 import pg from 'pg';
+import { GoogleGenAI, Type } from '@google/genai';
 
 dotenv.config();
+
+// Initialize server-side Gemini API client
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    }
+  }
+});
+
+/**
+ * Phonetic transliterator fallback for common Arabic names
+ */
+function localTransliterateEnglishNameToArabic(engName: string): string {
+  if (!engName) return '';
+  const clean = engName.trim().toLowerCase().replace(/\s+/g, ' ');
+  
+  const dict: { [key: string]: string } = {
+    'mohamed': 'محمد', 'mohammad': 'محمد', 'muhammad': 'محمد', 'mohamad': 'محمد',
+    'ahmed': 'أحمد', 'ahmad': 'أحمد',
+    'mahmoud': 'محمود', 'mahmood': 'محمود',
+    'ali': 'علي',
+    'omar': 'عمر',
+    'sahar': 'سحر',
+    'fatma': 'فاطمة', 'fatima': 'فاطمة',
+    'yasmine': 'ياسمين', 'yasmin': 'ياسمين',
+    'hassan': 'حسن',
+    'hussein': 'حسين', 'houssein': 'حسين',
+    'sayed': 'سيد', 'saied': 'سيد',
+    'mostafa': 'مصطفى', 'moustafa': 'مصطفى', 'mustafa': 'مصطفى',
+    'khalaf': 'خلف',
+    'allah': 'الله',
+    'ibrahim': 'إبراهيم',
+    'abdel': 'عبد', 'abdul': 'عبد', 'abd': 'عبد',
+    'rahman': 'الرحمن', 'rahim': 'الرحيم', 'karim': 'كريم',
+    'adli': 'عدلي', 'adly': 'عدلي',
+    'hanan': 'حنان',
+    'shaimaa': 'شيماء', 'shaymaa': 'شيماء', 'sheima': 'شيماء',
+    'fatouma': 'فطومة', 'fatoumat': 'فطومة', 'fatoumata': 'فطوماتا',
+    'diarissou': 'دياريسو', 'diarisso': 'دياريسو',
+    'unknown': 'غير معروف',
+    'sara': 'سارة', 'sarah': 'سارة',
+    'khaled': 'خالد',
+    'tarek': 'طارق',
+    'ayman': 'أيمن',
+    'amr': 'عمرو',
+    'sherif': 'شريف',
+    'magdy': 'مجدي',
+    'adel': 'عادل',
+    'gamal': 'جمال',
+    'emad': 'عماد',
+    'hany': 'هاني',
+    'sameh': 'سامح',
+    'mona': 'منى',
+    'ola': 'علا',
+    'reham': 'ريهام',
+    'rana': 'رنا',
+    'nour': 'نور',
+    'dina': 'دينا',
+    'mai': 'مي',
+    'heba': 'هبة',
+    'amal': 'أمل',
+    'iman': 'إيمان',
+    'eman': 'إيمان',
+    'aya': 'آية',
+    'reem': 'ريم',
+    'noha': 'نهى',
+    'ghada': 'غادة',
+    'salma': 'سلمى',
+    'nada': 'ندى',
+    'soha': 'سهى',
+    'mervat': 'ميرفت',
+    'faten': 'فاتن',
+    'nadia': 'نادية',
+    'layla': 'ليلى',
+    'laila': 'ليلى',
+    'hala': 'هالة',
+    'zeinab': 'زينب',
+  };
+
+  const parts = clean.split(' ');
+  const translatedParts = parts.map(p => {
+    if (dict[p]) return dict[p];
+    
+    if (p.startsWith('abdel') && p.length > 5) {
+      const rest = p.substring(5);
+      return 'عبد ' + (dict[rest] || rest);
+    }
+    if (p.startsWith('abdul') && p.length > 5) {
+      const rest = p.substring(5);
+      return 'عبد ' + (dict[rest] || rest);
+    }
+
+    let tr = p;
+    tr = tr.replace(/sh/g, 'ش');
+    tr = tr.replace(/kh/g, 'خ');
+    tr = tr.replace(/gh/g, 'غ');
+    tr = tr.replace(/ph/g, 'ف');
+    tr = tr.replace(/th/g, 'ث');
+    tr = tr.replace(/ou/g, 'و');
+    tr = tr.replace(/ee/g, 'ي');
+    tr = tr.replace(/oo/g, 'و');
+    tr = tr.replace(/aa/g, 'ا');
+    tr = tr.replace(/a/g, 'ا');
+    tr = tr.replace(/e/g, 'ي');
+    tr = tr.replace(/i/g, 'ي');
+    tr = tr.replace(/o/g, 'و');
+    tr = tr.replace(/u/g, 'و');
+    tr = tr.replace(/b/g, 'ب');
+    tr = tr.replace(/t/g, 'ت');
+    tr = tr.replace(/j/g, 'ج');
+    tr = tr.replace(/h/g, 'ه');
+    tr = tr.replace(/d/g, 'د');
+    tr = tr.replace(/r/g, 'ر');
+    tr = tr.replace(/z/g, 'ز');
+    tr = tr.replace(/s/g, 'س');
+    tr = tr.replace(/f/g, 'ف');
+    tr = tr.replace(/q/g, 'ق');
+    tr = tr.replace(/k/g, 'ك');
+    tr = tr.replace(/l/g, 'ل');
+    tr = tr.replace(/m/g, 'م');
+    tr = tr.replace(/n/g, 'ن');
+    tr = tr.replace(/y/g, 'ي');
+    tr = tr.replace(/w/g, 'و');
+    
+    tr = tr.replace(/ا+/g, 'ا');
+    tr = tr.replace(/ي+/g, 'ي');
+    tr = tr.replace(/و+/g, 'و');
+    
+    return tr;
+  });
+
+  return translatedParts.filter(Boolean).join(' ');
+}
 
 const { Pool } = pg;
 const app = express();
@@ -472,6 +608,79 @@ app.get('/api/health', async (req: Request, res: Response) => {
       hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
       error: err.message
     });
+  }
+});
+
+// AI-Powered Patient Name Translation / Transliteration Route
+app.post('/api/translate-names', async (req: Request, res: Response) => {
+  try {
+    const { names } = req.body;
+    if (!Array.isArray(names) || names.length === 0) {
+      return res.json({ translations: {} });
+    }
+
+    const translations: { [key: string]: string } = {};
+
+    // Filter names to process only English names (contains a-z/A-Z)
+    const englishNames = names.filter(n => typeof n === 'string' && /[a-zA-Z]/.test(n));
+
+    // For any non-English or empty names, return them as is
+    names.forEach(n => {
+      if (typeof n === 'string' && !/[a-zA-Z]/.test(n)) {
+        translations[n] = n;
+      }
+    });
+
+    if (englishNames.length === 0) {
+      return res.json({ translations });
+    }
+
+    // Try Gemini Translation if API Key is configured
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const prompt = `You are an expert bilingual medical registrar in an Arabic hospital.
+Translate/transliterate the following list of patient English names into natural, high-accuracy Arabic names (transliterations) that are appropriate for official health records.
+Maintain professional naming conventions (e.g., proper transliteration of phonetic sounds, handling of compound names like "Abdel Rahman", "Moustafa", etc.).
+
+Return the output strictly as a JSON object where the keys are the original English names and the values are their high-accuracy Arabic translations.
+Example input: ["Sahar Adly", "Yasmine Hassan"]
+Example output: {"Sahar Adly": "سحر عدلي", "Yasmine Hassan": "ياسمين حسن"}
+
+English Names to translate:
+${JSON.stringify(englishNames)}`;
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              description: 'Map of English name to Arabic name translation',
+            }
+          }
+        });
+
+        if (response.text) {
+          const geminiResult = JSON.parse(response.text.trim());
+          Object.assign(translations, geminiResult);
+        }
+      } catch (geminiError) {
+        console.error('Gemini name translation error, falling back to local phonetic model:', geminiError);
+      }
+    }
+
+    // Fill in any missing English name translations using the high-accuracy local phonetic helper
+    englishNames.forEach(n => {
+      if (!translations[n]) {
+        translations[n] = localTransliterateEnglishNameToArabic(n);
+      }
+    });
+
+    res.json({ translations });
+  } catch (error: any) {
+    console.error('Error in translate-names endpoint:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 

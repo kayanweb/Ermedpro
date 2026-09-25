@@ -95,6 +95,7 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
   const [bulkContract, setBulkContract] = useState<string>('');
 
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
 
   const detectDelimiter = (lines: string[]): string => {
     const delims = ['\t', '|', ';', ','];
@@ -230,8 +231,8 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
         order: toLocalDatetimeInput(eDate),
         actual: xDate ? toLocalDatetimeInput(xDate) : undefined,
         delay,
-        reason: reason || 'R01',
-        notes: 'مستورد من نظام HIS المستشفى',
+        reason: reason ? reason.trim() : '',
+        notes: reason ? `سبب التأخير: ${reason.trim()}` : '',
         status: xDate ? 'Transferred' : 'Pending',
         contract: contract || defContract || 'طوارئ المستشفى',
         cameFrom: cameFrom || 'من المنزل',
@@ -243,6 +244,76 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
     });
 
     return cases;
+  };
+
+  const handleTranslateEnglishNames = async (customCases?: StagedCase[]) => {
+    const targetCases = customCases || stagedCases;
+    const englishNames = targetCases
+      .map(c => c.name)
+      .filter((name): name is string => typeof name === 'string' && name.trim().length > 0 && /[a-zA-Z]/.test(name));
+
+    if (englishNames.length === 0) {
+      if (customCases) {
+        setStagedCases(customCases);
+      } else {
+        setFeedback({
+          type: 'info',
+          message: 'لا توجد أسماء مرضى مكتوبة بالحروف الإنجليزية لترجمتها!',
+        });
+      }
+      return;
+    }
+
+    setIsTranslating(true);
+    try {
+      const response = await fetch('/api/translate-names', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ names: englishNames }),
+      });
+      const data = await response.json();
+      if (data.translations) {
+        const translateList = (list: StagedCase[]) =>
+          list.map(c => {
+            if (c.name && data.translations[c.name]) {
+              return {
+                ...c,
+                name: data.translations[c.name],
+                notes: c.notes ? `${c.notes} | الاسم الأصلي: ${c.name}` : `الاسم الأصلي: ${c.name}`,
+                isEdited: true,
+              };
+            }
+            return c;
+          });
+
+        if (customCases) {
+          setStagedCases(translateList(customCases));
+        } else {
+          setStagedCases(prev => translateList(prev));
+        }
+
+        if (!customCases) {
+          setFeedback({
+            type: 'success',
+            message: `تم بنجاح ترجمة وتصحيح ${Object.keys(data.translations).length} اسماً إنجليزياً إلى العربية بدقة متناهية!`,
+          });
+        }
+      } else {
+        if (customCases) setStagedCases(customCases);
+      }
+    } catch (err) {
+      console.error('Translation error:', err);
+      if (customCases) {
+        setStagedCases(customCases);
+      } else {
+        setFeedback({
+          type: 'error',
+          message: 'حدث خطأ أثناء الاتصال بخدمة ترجمة الأسماء بالذكاء الاصطناعي.',
+        });
+      }
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   const handleParse = () => {
@@ -264,6 +335,8 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
         type: 'success',
         message: `تم التعرف الذكي التلقائي على [${smartParsed.detectedFormatTitleAr}]: تم استخراج وتحليل ${smartParsed.cases.length} حالة بنجاح مع مطابقة جهات التعاقد وحساب مدد التأخير والأوقات آلياً!`,
       });
+      // Trigger automatic high-accuracy translation
+      handleTranslateEnglishNames(smartParsed.cases);
       return;
     }
 
@@ -313,6 +386,9 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
       type: 'success',
       message: `تم تحليل البيانات بنجاح: تم التعرف على ${initialStaged.length} حالة وقراءة جهات التعاقد وحقول المستشفى بنجاح للمراجعة والتعديل قبل اعتماد النقل.`,
     });
+
+    // Trigger automatic high-accuracy translation
+    handleTranslateEnglishNames(initialStaged);
   };
 
   // Re-sync staged cases when column mapping changes, preserving manual edits if possible
@@ -1132,6 +1208,17 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  onClick={() => handleTranslateEnglishNames()}
+                  disabled={isTranslating}
+                  className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold rounded-lg flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  title="ترجمة وتصحيح جميع أسماء المرضى المكتوبة بالإنجليزية إلى العربية بدقة متناهية باستخدام الذكاء الاصطناعي"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <span>{isTranslating ? '⏳ جاري الترجمة...' : '🤖 ترجمة الأسماء الإنجليزية'}</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={handleAddManualStagedCase}
                   className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold rounded-lg flex items-center gap-1 cursor-pointer"
                 >
@@ -1314,19 +1401,17 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
                               <option value="Intermediate">Intermediate (متوسطة)</option>
                             </select>
                           </td>
-                          {/* Inline Reason Select */}
+                          {/* Inline Reason Input (allows exact copied text or empty) */}
                           <td className="py-2 px-3">
-                            <select
-                              value={c.reason}
+                            <input
+                              type="text"
+                              list="causesListImport"
+                              value={c.reason ?? ''}
                               onChange={e => handleInlineReasonChange(c.id, e.target.value)}
-                              className="w-full max-w-[150px] p-1 bg-white border border-slate-300 rounded-md text-slate-700 text-[11px] outline-hidden focus:border-emerald-500 truncate"
-                            >
-                              {REASONS.map(r => (
-                                <option key={r.code} value={r.code}>
-                                  {r.code} - {r.textAr}
-                                </option>
-                              ))}
-                            </select>
+                              placeholder="(فاضي أو اكتب السبب)"
+                              title="سبب التأخير - ينسخ كما هو أو يترك فارغاً"
+                              className="w-full min-w-[130px] p-1.5 bg-white border border-slate-300 rounded-md text-slate-800 text-[11px] outline-hidden focus:border-emerald-500 font-medium"
+                            />
                           </td>
                           {/* Actions */}
                           <td className="py-2 px-3 text-center">
@@ -1640,18 +1725,18 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
                 </div>
 
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">سبب التأخير</label>
-                  <select
-                    value={editingCase.reason}
+                  <label className="block text-slate-700 font-bold mb-1 flex items-center justify-between">
+                    <span>سبب التأخير (Causes of Delay)</span>
+                    <span className="text-[11px] font-normal text-slate-500">يمكن كتابة أي سبب أو تركه فارغاً</span>
+                  </label>
+                  <input
+                    type="text"
+                    list="causesListImport"
+                    value={editingCase.reason ?? ''}
                     onChange={e => setEditingCase({ ...editingCase, reason: e.target.value })}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-semibold"
-                  >
-                    {REASONS.map(r => (
-                      <option key={r.code} value={r.code}>
-                        {r.code} - {r.textAr}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="(اتركه فارغاً أو اكتب / اختر السبب)"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-emerald-500 outline-hidden font-semibold text-slate-800"
+                  />
                 </div>
 
                 <div>
@@ -1756,6 +1841,19 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
           </div>
         </div>
       )}
+      {/* Causes of Delay Datalist */}
+      <datalist id="causesListImport">
+        <option value="NONE" />
+        <option value="UN AVAILABLE BEDS" />
+        <option value="LABS RESULTS" />
+        <option value="PREPARING BED" />
+        <option value="CONTRACT AGREEMENT" />
+        <option value="SAVING LIFE" />
+        <option value="DOPPLER RESULT" />
+        {REASONS.map(r => (
+          <option key={r.code} value={r.textAr} />
+        ))}
+      </datalist>
     </div>
   );
 };

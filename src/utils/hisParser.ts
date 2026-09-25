@@ -315,7 +315,7 @@ export function parseHospitalPaste(
 
     rows.forEach((row, idx) => {
       // Skip empty or header rows
-      if (row.length < 3 || row[0].includes('تاريخ') || row[1]?.includes('اسم')) return;
+      if (row.length < 3 || /^(تاريخ|date)/i.test(row[0].trim()) || /^(اسم المريض|الاسم|patient\s*name|name)$/i.test(row[1]?.trim())) return;
 
       const dateStr = row[0];
       const name = row[1] || `مريض ${idx + 1}`;
@@ -325,10 +325,10 @@ export function parseHospitalPaste(
       const orderTimeStr = row[3] || '';
       const actualTimeStr = row[4] || '';
       const delayDeptStr = row[5] || '';
-      const reasonStr = row[6] || '';
+      // Causes of Delay: Copy exactly as present in the source table, even if empty or NONE!
+      const rawReason = row[6] !== undefined && row[6] !== null ? row[6].trim() : '';
 
       const { delay: parsedDelay, dept: parsedDept } = parseDelayAndDept(delayDeptStr);
-      const reasonObj = mapDelayReasonCode(reasonStr);
 
       const orderIso = buildIsoDateTimeString(dateStr, orderTimeStr) || new Date().toISOString().substring(0, 16);
       const actualIso = buildIsoDateTimeString(dateStr, actualTimeStr);
@@ -347,8 +347,8 @@ export function parseHospitalPaste(
         order: orderIso,
         actual: actualIso || undefined,
         delay: finalDelay,
-        reason: reasonObj.code || defaultReason,
-        notes: reasonObj.labelAr ? `سبب التأخير: ${reasonObj.labelAr}` : 'مستورد من شيت إكسيل الطوارئ',
+        reason: rawReason, // Copy reason exactly as present (e.g. NONE, UN AVAILABLE BEDS, or "")
+        notes: rawReason ? `سبب التأخير: ${rawReason}` : '',
         status: actualIso ? 'Transferred' : 'Pending',
         contract: 'مرضى بهية',
         cameFrom: 'من المنزل',
@@ -416,6 +416,27 @@ export function parseHospitalPaste(
           delay = Math.max(0, diff);
         }
 
+        // Scan the rest of the row for a delay reason if present
+        let parsedReason = '';
+        const possibleReasonKeywords = [
+          'UN AVAILABLE BEDS', 'LABS RESULTS', 'PREPARING BED', 'CONTRACT AGREEMENT', 'SAVING LIFE', 'DOPPLER RESULT', 'NONE',
+          'R01', 'R02', 'R03', 'R04', 'R05', 'R06', 'R07', 'R08', 'R09', 'R10',
+          'في انتظار', 'سرير', 'تحاليل', 'أشعة', 'موافقة', 'تجهيز'
+        ];
+
+        for (let i = mrnIdx + 8; i < row.length; i++) {
+          const val = row[i]?.trim();
+          if (val) {
+            const valUpper = val.toUpperCase();
+            if (possibleReasonKeywords.some(kw => valUpper.includes(kw)) || /^[A-Z\s_]{3,30}$/.test(valUpper)) {
+              parsedReason = val;
+              break;
+            } else if (!parsedReason) {
+              parsedReason = val;
+            }
+          }
+        }
+
         cases.push({
           id: `staged-his-${idx + 1}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           medical: mrn,
@@ -424,8 +445,8 @@ export function parseHospitalPaste(
           order: orderIso,
           actual: actualIso || undefined,
           delay: delay,
-          reason: defaultReason || 'R01',
-          notes: 'مستورد مباشرة من نظام HIS المستشفى',
+          reason: parsedReason, // Extracted reason or empty
+          notes: parsedReason ? `سبب التأخير: ${parsedReason}` : '',
           status: actualIso ? 'Transferred' : 'Pending',
           contract: contract || defaultContract,
           cameFrom: cameFrom || 'من المنزل',

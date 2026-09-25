@@ -441,6 +441,14 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
     onUpdateRecord(updated);
   };
 
+  const handleInlineReasonChange = (record: ERRecord, newReason: string) => {
+    const updated = {
+      ...record,
+      reason: newReason,
+    };
+    onUpdateRecord(updated);
+  };
+
   const getDelayBadgeClass = (delay?: number | null) => {
     if (delay === null || delay === undefined) {
       return 'bg-slate-100 text-slate-500 font-normal';
@@ -850,15 +858,16 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
 
                       {/* Causes of Delay */}
                       {cols.showCauses && (
-                        <td className="py-2 px-4 border-r border-slate-300 text-right text-slate-700 text-[11px]">
-                          {reasonObj ? (
-                            <div>
-                              <div className="font-semibold text-slate-800">{reasonObj.text}</div>
-                              <div className="text-slate-500 text-[10px]">{reasonObj.textAr}</div>
-                            </div>
-                          ) : (
-                            record.reason || '-'
-                          )}
+                        <td className="py-2 px-2 border-r border-slate-300">
+                          <input
+                            type="text"
+                            list="causesListOfficial"
+                            value={record.reason ?? ''}
+                            onChange={e => handleInlineReasonChange(record, e.target.value)}
+                            placeholder="-"
+                            title="سبب التأخير (Causes of Delay) - ينسخ كما هو أو يترك فارغاً"
+                            className="w-full min-w-[125px] px-2 py-1 text-center text-xs rounded-lg border border-slate-300 font-semibold transition outline-none bg-slate-50 focus:bg-white focus:border-indigo-500 text-slate-800"
+                          />
                         </td>
                       )}
 
@@ -1000,6 +1009,20 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
           <option value="ICU" />
           <option value="Intermediate" />
           <option value="Inpatient" />
+        </datalist>
+
+        {/* Causes of Delay Datalist */}
+        <datalist id="causesListOfficial">
+          <option value="NONE" />
+          <option value="UN AVAILABLE BEDS" />
+          <option value="LABS RESULTS" />
+          <option value="PREPARING BED" />
+          <option value="CONTRACT AGREEMENT" />
+          <option value="SAVING LIFE" />
+          <option value="DOPPLER RESULT" />
+          {REASONS.map(r => (
+            <option key={r.code} value={r.textAr} />
+          ))}
         </datalist>
 
         {/* Footer Note */}

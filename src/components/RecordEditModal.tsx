@@ -29,7 +29,7 @@ export const RecordEditModal: React.FC<RecordEditModalProps> = ({ record, onClos
   const [entryMethod, setEntryMethod] = useState<'Manual' | 'Imported'>(record.entryMethod === 'Imported' ? 'Imported' : 'Manual');
   const [orderTime, setOrderTime] = useState(record.order);
   const [actualTime, setActualTime] = useState(record.actual || '');
-  const [reason, setReason] = useState(record.reason || 'R01');
+  const [reason, setReason] = useState(record.reason ?? '');
   const [notes, setNotes] = useState(record.notes || '');
 
   const delayMinutes = calcMinutesDiff(orderTime, actualTime);
@@ -342,18 +342,30 @@ export const RecordEditModal: React.FC<RecordEditModalProps> = ({ record, onClos
           </div>
 
           <div>
-            <label className="block font-bold text-slate-700 mb-1">سبب التأخير</label>
-            <select
+            <label className="block font-bold text-slate-700 mb-1 flex items-center justify-between">
+              <span>سبب التأخير (Causes of Delay)</span>
+              <span className="text-[11px] font-normal text-slate-500">ينسخ كما هو أو يترك فارغاً</span>
+            </label>
+            <input
+              type="text"
+              list="causesListRecordModal"
               value={reason}
               onChange={e => setReason(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 font-semibold bg-white outline-none"
-            >
+              placeholder="اكتب سبب التأخير أو اختر من القائمة..."
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 font-semibold bg-white outline-none focus:border-indigo-500 text-slate-800"
+            />
+            <datalist id="causesListRecordModal">
+              <option value="NONE" />
+              <option value="UN AVAILABLE BEDS" />
+              <option value="LABS RESULTS" />
+              <option value="PREPARING BED" />
+              <option value="CONTRACT AGREEMENT" />
+              <option value="SAVING LIFE" />
+              <option value="DOPPLER RESULT" />
               {REASONS.map(r => (
-                <option key={r.code} value={r.code}>
-                  {r.code} - {r.text}
-                </option>
+                <option key={r.code} value={r.textAr} />
               ))}
-            </select>
+            </datalist>
           </div>
 
           <div>
