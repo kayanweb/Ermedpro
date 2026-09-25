@@ -86,49 +86,86 @@ export async function safeFetchJson<T>(
   throw lastError instanceof Error ? lastError : new Error(`Network failure communicating with ${url}`);
 }
 
-async function safeMutationJson<T>(url: string, options: RequestInit): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        ...(options.headers || {}),
-      },
-    });
-  } catch (netErr: any) {
-    throw new Error(formatErrorMessage(netErr, `تعذر الاتصال بالخادم على ${url}`));
+async function safeMutationJson<T>(url: string, options: RequestInit, retries = 3, baseDelay = 800): Promise<T> {
+  let lastError: any = null;
+
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          ...(options.headers || {}),
+        },
+      });
+
+      const contentType = res.headers.get('content-type') || '';
+      const isHtml = contentType.toLowerCase().includes('text/html');
+      const isGatewayError = res.status === 502 || res.status === 503 || res.status === 504 || res.status === 429;
+
+      if (isHtml || isGatewayError) {
+        lastError = new Error(`Server returned status ${res.status} on ${url}`);
+        if (attempt < retries - 1) {
+          await new Promise(r => setTimeout(r, baseDelay * (attempt + 1)));
+          continue;
+        }
+        throw lastError;
+      }
+
+      const text = await res.text();
+      if (!text || text.trim().startsWith('<')) {
+        lastError = new Error(`Invalid response received from ${url}`);
+        if (attempt < retries - 1) {
+          await new Promise(r => setTimeout(r, baseDelay * (attempt + 1)));
+          continue;
+        }
+        throw lastError;
+      }
+
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch (parseErr: any) {
+        throw new Error(`خطأ في تحليل استجابة الخادم: ${text.slice(0, 100)}`);
+      }
+
+      // Check for challenge or rate limit error object
+      if (data && data.error) {
+        const errObj = data.error;
+        if (typeof errObj === 'object' && errObj !== null) {
+          if (errObj.code === 'challenge' || errObj.message?.includes('challenge')) {
+            lastError = new Error('تطلب الخادم تحققاً أمنياً مؤقتاً (Security Challenge). يجتمع النظام لإعادة المحاولة...');
+            if (attempt < retries - 1) {
+              await new Promise(r => setTimeout(r, baseDelay * (attempt + 1) * 1.5));
+              continue;
+            }
+          }
+        }
+      }
+
+      if (!res.ok) {
+        let extracted = '';
+        if (data) {
+          if (typeof data.error === 'string') extracted = data.error;
+          else if (typeof data.error?.message === 'string') extracted = data.error.message;
+          else if (typeof data.message === 'string') extracted = data.message;
+          else extracted = JSON.stringify(data);
+        }
+        throw new Error(extracted || `HTTP error ${res.status}`);
+      }
+
+      return data as T;
+    } catch (netErr: any) {
+      lastError = netErr;
+      if (attempt < retries - 1) {
+        await new Promise(r => setTimeout(r, baseDelay * (attempt + 1)));
+        continue;
+      }
+    }
   }
 
-  const contentType = res.headers.get('content-type') || '';
-  if (contentType.toLowerCase().includes('text/html')) {
-    throw new Error(`Server returned HTML error (${res.status}) on ${url}`);
-  }
-
-  const text = await res.text();
-  if (!text || text.trim().startsWith('<')) {
-    throw new Error(`Invalid JSON response received from ${url}`);
-  }
-
-  let data: any;
-  try {
-    data = JSON.parse(text);
-  } catch (parseErr: any) {
-    throw new Error(`خطأ في تحليل استجابة الخادم: ${text.slice(0, 100)}`);
-  }
-
-  if (!res.ok) {
-    const extracted = typeof data?.error === 'string'
-      ? data.error
-      : typeof data?.message === 'string'
-      ? data.message
-      : typeof data === 'string'
-      ? data
-      : JSON.stringify(data);
-    throw new Error(extracted || `HTTP error ${res.status}`);
-  }
-  return data as T;
+  throw lastError instanceof Error ? lastError : new Error(`تعذر إتمام العملية على ${url}`);
 }
 
 export async function checkDbHealth(): Promise<DbHealthStatus> {

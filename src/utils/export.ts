@@ -248,7 +248,7 @@ export function printOfficialReport(records: ERRecord[], options?: PrintReportOp
     .join('');
 
   const reportTitle = options?.reportTitle || 'النموذج الرسمي المعتمد لأوقات انتظار الطوارئ (ER for Waiting Time)';
-  const hospitalName = options?.hospitalName || 'مستشفى الطوارئ العام';
+  const hospitalName = options?.hospitalName || 'مستشفى الطوارئ والحالات الحرجة';
 
   const html = `<!DOCTYPE html>
   <html lang="ar" dir="rtl">
