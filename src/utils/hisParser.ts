@@ -226,7 +226,7 @@ export function mapDelayReasonCode(str?: string | null): { code: string; labelAr
   if (!str) return { code: 'R01', labelAr: 'في انتظار توفر سرير بالأقسام' };
   const s = String(str).trim().toUpperCase();
 
-  if (s === 'NONE' || s === 'NO DELAY' || s === 'لا يوجد' || s === 'لايوجد') {
+  if (s === 'NONE' || s === 'NORMAL' || s === 'NO DELAY' || s === 'لا يوجد' || s === 'لايوجد') {
     return { code: 'R01', labelAr: 'لا يوجد تأخير - انتقال سريع' };
   }
   if (s.includes('UN AVAILABLE BEDS') || (s.includes('BED') && s.includes('UNAVAILABLE')) || s.includes('سرير')) {
@@ -326,7 +326,10 @@ export function parseHospitalPaste(
       const actualTimeStr = row[4] || '';
       const delayDeptStr = row[5] || '';
       // Causes of Delay: Copy exactly as present in the source table, even if empty or NONE!
-      const rawReason = row[6] !== undefined && row[6] !== null ? row[6].trim() : '';
+      let rawReason = row[6] !== undefined && row[6] !== null ? row[6].trim() : '';
+      if (rawReason.toUpperCase() === 'NORMAL') {
+        rawReason = 'NONE';
+      }
 
       const { delay: parsedDelay, dept: parsedDept } = parseDelayAndDept(delayDeptStr);
 
@@ -435,6 +438,10 @@ export function parseHospitalPaste(
               parsedReason = val;
             }
           }
+        }
+
+        if (parsedReason.toUpperCase() === 'NORMAL') {
+          parsedReason = 'NONE';
         }
 
         cases.push({
