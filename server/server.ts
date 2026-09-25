@@ -274,6 +274,66 @@ async function initDatabase() {
       UPDATE er_records SET came_from = 'من المنزل' WHERE (came_from IS NULL OR came_from = '');
     `);
 
+    // Alter existing tables to increase VARCHAR length limits and avoid too long type errors
+    const alterColumns = [
+      'bed_number TYPE VARCHAR(512)',
+      'risk_score TYPE VARCHAR(512)',
+      'entry_method TYPE VARCHAR(512)',
+      'triage_level TYPE VARCHAR(512)',
+      'discharge_type TYPE VARCHAR(512)',
+      'registration_type TYPE VARCHAR(512)',
+      'visit_no TYPE VARCHAR(512)',
+      'contract TYPE VARCHAR(512)',
+      'came_from TYPE VARCHAR(512)',
+      'status TYPE VARCHAR(512)',
+      'recorded_by TYPE VARCHAR(512)',
+      'dept TYPE VARCHAR(512)'
+    ];
+
+    for (const col of alterColumns) {
+      try {
+        await pool.query(`ALTER TABLE er_records ALTER COLUMN ${col};`);
+      } catch (e: any) {
+        console.error(`Migration error altering er_records column: ${col}`, e.message);
+      }
+    }
+
+    const alterBedsColumns = [
+      'bed_number TYPE VARCHAR(512)',
+      'status TYPE VARCHAR(512)',
+      'dept TYPE VARCHAR(512)',
+      'patient_mrn TYPE VARCHAR(512)'
+    ];
+
+    for (const col of alterBedsColumns) {
+      try {
+        await pool.query(`ALTER TABLE hospital_beds ALTER COLUMN ${col};`);
+      } catch (e: any) {
+        console.error(`Migration error altering hospital_beds column: ${col}`, e.message);
+      }
+    }
+
+    const alterAuditColumns = [
+      'action TYPE VARCHAR(512)',
+      'user_role TYPE VARCHAR(512)',
+      'category TYPE VARCHAR(512)',
+      'patient_mrn TYPE VARCHAR(512)'
+    ];
+
+    for (const col of alterAuditColumns) {
+      try {
+        await pool.query(`ALTER TABLE hospital_audit_logs ALTER COLUMN ${col};`);
+      } catch (e: any) {
+        console.error(`Migration error altering hospital_audit_logs column: ${col}`, e.message);
+      }
+    }
+
+    try {
+      await pool.query(`ALTER TABLE case_comments ALTER COLUMN user_role TYPE VARCHAR(512);`);
+    } catch (e: any) {
+      console.error(`Migration error altering case_comments user_role column`, e.message);
+    }
+
     // 2. Users Table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS hospital_users (
