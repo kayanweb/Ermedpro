@@ -2,7 +2,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
 import pg from 'pg';
-import { createServer as createViteServer } from 'vite';
 
 dotenv.config();
 
@@ -371,36 +370,40 @@ function mapRowToRecord(row: any) {
 app.get('/api/health', async (req: Request, res: Response) => {
   try {
     const start = Date.now();
-    // Test basic connectivity first
+    // Test basic connectivity with Neon PostgreSQL Pool
     await pool.query('SELECT 1');
     
-    // Check if table exists and count
+    // Check if DATABASE_URL is set in environment (without exposing its value)
+    const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
+
+    // Verify database schema by counting records
+    let databaseStatus = 'ok';
     let recordCount = 0;
-    let serverTime = new Date().toISOString();
     try {
-      const result = await pool.query('SELECT COUNT(*) as count, NOW() as server_time FROM er_records');
+      const result = await pool.query('SELECT COUNT(*) as count FROM er_records');
       recordCount = parseInt(result.rows[0].count, 10);
-      serverTime = result.rows[0].server_time;
     } catch {
-      // table might not be created yet, trigger async init
+      // If table is missing, flag it but keep general DB as ok since pool connected, and trigger async init
+      databaseStatus = 'initializing';
       ensureDbInitializedAsync();
     }
 
     const latency = Date.now() - start;
     res.json({
       status: 'ok',
-      db: 'Neon PostgreSQL',
-      connected: true,
+      runtime: 'ok',
+      database: databaseStatus,
+      hasDatabaseUrl,
       latencyMs: latency,
-      recordCount,
-      serverTime,
+      recordCount
     });
   } catch (err: any) {
     res.status(500).json({
       status: 'error',
-      db: 'Neon PostgreSQL',
-      connected: false,
-      error: err.message,
+      runtime: 'ok',
+      database: 'down',
+      hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
+      error: err.message
     });
   }
 });
@@ -1682,6 +1685,7 @@ async function startServer() {
   }
 
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
