@@ -27,6 +27,7 @@ import {
   RotateCcw,
   Sparkles,
   MousePointerClick,
+  Share2,
 } from 'lucide-react';
 
 interface OfficialReportTabProps {
@@ -348,6 +349,57 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
     return `${minutes} د (${hrs}س ${mins}د)`;
   };
 
+  const shareRecordOnWhatsApp = (record: ERRecord) => {
+    const delayStr = record.delay !== null && record.delay !== undefined ? formatDelayDisplay(record.delay) : '-';
+    const text = `*تقرير انتقال مريض (مستشفى الطوارئ والحالات الحرجة)*
+------------------------------------
+👤 *اسم المريض:* ${record.name}
+🆔 *الرقم الطبي:* ${record.medical}
+🏥 *القسم المحول إليه:* ${record.dept || 'غير محدد'}
+🧬 *جهة التعاقد:* ${record.contract || 'طوارئ المستشفى'}
+🌡️ *مستوى الفرز:* ${record.triageLevel || 'Level 3 - عادي'}
+⏳ *وقت القرار:* ${fmtDateTime(record.order)}
+⏱️ *وقت النقل:* ${record.actual ? fmtDateTime(record.actual) : "قيد الانتظار ⏳"}
+⏱️ *مدة الانتظار:* ${delayStr}
+🚫 *سبب التأخير:* ${record.reason || 'لا يوجد'}
+🛏️ *رقم السرير:* ${record.bedNumber || 'غير محدد'}
+📝 *نوع الخروج:* ${record.dischargeType || 'غير محدد'}
+
+📱 تم الإرسال من نظام متابعة طوارئ المستشفى الآلي.`;
+    
+    const encoded = encodeURIComponent(text);
+    window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
+  };
+
+  const shareAllRecordsOnWhatsApp = () => {
+    if (filteredRecords.length === 0) return;
+    
+    let text = `*📊 تقرير أوقات انتظار الطوارئ الشامل*
+📅 *تاريخ التقرير:* ${new Date().toLocaleDateString('ar-EG')}
+👥 *إجمالي الحالات المعروضة:* ${filteredRecords.length}
+------------------------------------
+`;
+
+    filteredRecords.forEach((record, index) => {
+      const delayStr = record.delay !== null && record.delay !== undefined ? formatDelayDisplay(record.delay) : '-';
+      text += `*#${index + 1} | ${record.name}*
+• 🆔 الرقم الطبي: ${record.medical}
+• 🏥 القسم: ${record.dept || 'غير محدد'}
+• 🧬 التعاقد: ${record.contract || 'طوارئ المستشفى'}
+• ⏳ وقت القرار: ${fmtDateTime(record.order)}
+• ⏱️ وقت النقل: ${record.actual ? fmtDateTime(record.actual) : "قيد الانتظار ⏳"}
+• ⏱️ مدة الانتظار: ${delayStr}
+• 🚫 سبب التأخير: ${record.reason || 'لا يوجد'}
+------------------------------------
+`;
+    });
+
+    text += `\n📱 تم الإرسال من نظام متابعة طوارئ المستشفى الآلي.`;
+
+    const encoded = encodeURIComponent(text);
+    window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
+  };
+
   // Filter records
   const filteredRecords = useMemo(() => {
     let result = [...records].sort((a, b) => new Date(b.order).getTime() - new Date(a.order).getTime());
@@ -545,6 +597,18 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
             </button>
 
             <button
+              id="share-whatsapp-all-btn"
+              onClick={shareAllRecordsOnWhatsApp}
+              className="px-3.5 py-2 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="مشاركة التقرير الكامل بجميع الحالات الحالية على واتساب"
+            >
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.498 1.451 5.419 1.452 5.518 0 10.011-4.493 10.014-10.011.002-2.673-1.04-5.184-2.936-7.082C17.25 1.614 14.74 0.57 12.01 0.57 6.488 0.57 1.996 5.061 1.993 10.584c-.001 1.916.501 3.791 1.454 5.4l-.994 3.633 3.71-.973zm11.567-7.272c-.313-.157-1.854-.915-2.131-1.016-.277-.1-.479-.15-.68.15-.201.3-.777.98-.952 1.18-.175.2-.35.225-.663.068-.313-.157-1.322-.487-2.52-1.555-.931-.83-1.56-1.854-1.743-2.167-.182-.313-.019-.482.138-.638.14-.14.313-.365.47-.547.157-.183.21-.313.313-.522.103-.21.052-.392-.026-.547-.078-.157-.68-1.64-1.116-2.694-.426-1.025-.859-.886-1.18-.9l-.68-.01c-.244 0-.643.09-1.016.495-.373.405-1.42 1.39-1.42 3.39 0 2.001 1.458 3.93 1.66 4.2 0 .267 2.81 4.29 6.804 6.015 2.1.91 3.122.975 4.148.82 1.15-.172 2.373-.97 2.707-1.9 1.332-.93 1.42-1.73 1.42-2.03 0-.1-.08-.15-.39-.3z"/>
+              </svg>
+              <span>مشاركة جميع الحالات ({filteredRecords.length})</span>
+            </button>
+
+            <button
               id="export-csv-btn"
               onClick={() => exportToCSV(filteredRecords)}
               className="px-3.5 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
@@ -679,32 +743,32 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
         </div>
 
         {/* The Data Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[72vh] border border-slate-300 rounded-xl shadow-inner scrollbar-thin">
           <table className="w-full text-xs text-center border-collapse">
-            <thead>
+            <thead className="sticky top-0 z-10 bg-[#1f3864] shadow-xs">
               <tr className="bg-[#1f3864] text-white font-bold border-b border-slate-800 whitespace-nowrap">
-                {cols.showIndex && <th className="py-2.5 px-2 border-r border-slate-700">#</th>}
-                {cols.showDate && <th className="py-2.5 px-3 border-r border-slate-700">Date</th>}
-                {cols.showName && <th className="py-2.5 px-4 border-r border-slate-700 text-right">Patient Name</th>}
-                {cols.showMrn && <th className="py-2.5 px-3 border-r border-slate-700">Medical No.</th>}
-                {cols.showTriage && <th className="py-2.5 px-3 border-r border-slate-700 text-amber-300">Case 🚨 Triage</th>}
-                {cols.showContract && <th className="py-2.5 px-3 border-r border-slate-700 text-purple-200">Contract 💰</th>}
-                {cols.showOrderTime && <th className="py-2.5 px-3 border-r border-slate-700">Transfer Order Time</th>}
-                {cols.showActualTime && <th className="py-2.5 px-3 border-r border-slate-700">Actual Transfer Time</th>}
-                {cols.showDelay && <th className="py-2.5 px-3 border-r border-slate-700 text-amber-200">Delay /Minutes (Hours)</th>}
-                {cols.showCauses && <th className="py-2.5 px-4 border-r border-slate-700 text-right">Causes of Delay</th>}
+                {cols.showIndex && <th className="py-2.5 px-2 border-r border-slate-700 bg-[#1f3864]">#</th>}
+                {cols.showDate && <th className="py-2.5 px-3 border-r border-slate-700 bg-[#1f3864]">Date</th>}
+                {cols.showName && <th className="py-2.5 px-4 border-r border-slate-700 text-right bg-[#1f3864]">Patient Name</th>}
+                {cols.showMrn && <th className="py-2.5 px-3 border-r border-slate-700 bg-[#1f3864]">Medical No.</th>}
+                {cols.showTriage && <th className="py-2.5 px-3 border-r border-slate-700 text-amber-300 bg-[#1f3864]">Case 🚨 Triage</th>}
+                {cols.showContract && <th className="py-2.5 px-3 border-r border-slate-700 text-purple-200 bg-[#1f3864]">Contract 💰</th>}
+                {cols.showOrderTime && <th className="py-2.5 px-3 border-r border-slate-700 bg-[#1f3864]">Transfer Order Time</th>}
+                {cols.showActualTime && <th className="py-2.5 px-3 border-r border-slate-700 bg-[#1f3864]">Actual Transfer Time</th>}
+                {cols.showDelay && <th className="py-2.5 px-3 border-r border-slate-700 text-amber-200 bg-[#1f3864]">Delay /Minutes (Hours)</th>}
+                {cols.showCauses && <th className="py-2.5 px-4 border-r border-slate-700 text-right bg-[#1f3864]">Causes of Delay</th>}
                 {cols.showDestination && (
                   <th
-                    className="py-2.5 px-3 border-r border-slate-700 text-slate-950 font-bold"
+                    className="py-2.5 px-3 border-r border-slate-700 text-slate-950 font-bold sticky top-0"
                     style={{ background: '#f7971e' }}
                   >
                     Destination ➜ القسم
                   </th>
                 )}
-                {cols.showBed && <th className="py-2.5 px-3 border-r border-slate-700 text-blue-200">Bed # السرير</th>}
-                {cols.showDischarge && <th className="py-2.5 px-3 border-r border-slate-700 text-emerald-200">Discharge / نوع الخروج</th>}
-                {cols.showEntryMethod && <th className="py-2.5 px-2 border-r border-slate-700">طريقة الإدخال</th>}
-                {cols.showActions && <th className="py-2.5 px-3 no-print">الإجراءات</th>}
+                {cols.showBed && <th className="py-2.5 px-3 border-r border-slate-700 text-blue-200 bg-[#1f3864]">Bed # السرير</th>}
+                {cols.showDischarge && <th className="py-2.5 px-3 border-r border-slate-700 text-emerald-200 bg-[#1f3864]">Discharge / نوع الخروج</th>}
+                {cols.showEntryMethod && <th className="py-2.5 px-2 border-r border-slate-700 bg-[#1f3864]">طريقة الإدخال</th>}
+                {cols.showActions && <th className="py-2.5 px-3 no-print bg-[#1f3864]">الإجراءات</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-300 bg-white text-slate-800">
@@ -954,6 +1018,17 @@ export const OfficialReportTab: React.FC<OfficialReportTabProps> = ({
                                 <QrCode className="w-3.5 h-3.5" />
                               </button>
                             )}
+
+                            <button
+                              type="button"
+                              onClick={() => shareRecordOnWhatsApp(record)}
+                              className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-[#128C7E] hover:text-[#075E54] transition cursor-pointer flex items-center justify-center"
+                              title="مشاركة تفاصيل المريض مباشرةً على واتساب"
+                            >
+                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.498 1.451 5.419 1.452 5.518 0 10.011-4.493 10.014-10.011.002-2.673-1.04-5.184-2.936-7.082C17.25 1.614 14.74 0.57 12.01 0.57 6.488 0.57 1.996 5.061 1.993 10.584c-.001 1.916.501 3.791 1.454 5.4l-.994 3.633 3.71-.973zm11.567-7.272c-.313-.157-1.854-.915-2.131-1.016-.277-.1-.479-.15-.68.15-.201.3-.777.98-.952 1.18-.175.2-.35.225-.663.068-.313-.157-1.322-.487-2.52-1.555-.931-.83-1.56-1.854-1.743-2.167-.182-.313-.019-.482.138-.638.14-.14.313-.365.47-.547.157-.183.21-.313.313-.522.103-.21.052-.392-.026-.547-.078-.157-.68-1.64-1.116-2.694-.426-1.025-.859-.886-1.18-.9l-.68-.01c-.244 0-.643.09-1.016.495-.373.405-1.42 1.39-1.42 3.39 0 2.001 1.458 3.93 1.66 4.2 0 .267 2.81 4.29 6.804 6.015 2.1.91 3.122.975 4.148.82 1.15-.172 2.373-.97 2.707-1.9 1.332-.93 1.42-1.73 1.42-2.03 0-.1-.08-.15-.39-.3z"/>
+                              </svg>
+                            </button>
 
                             {userRole !== 'Viewer' && (
                               <button

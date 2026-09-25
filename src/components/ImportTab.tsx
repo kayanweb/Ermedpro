@@ -1286,11 +1286,11 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
             </div>
 
             {/* Editable Cases Table */}
-            <div className="overflow-x-auto border border-slate-200 rounded-xl shadow-xs">
+            <div className="overflow-auto max-h-[60vh] border border-slate-200 rounded-xl shadow-xs scrollbar-thin">
               <table className="w-full text-xs text-right border-collapse min-w-[850px]">
-                <thead className="bg-slate-800 text-white">
-                  <tr>
-                    <th className="py-2.5 px-3 w-8 text-center">
+                <thead className="bg-slate-800 text-white sticky top-0 z-10">
+                  <tr className="bg-slate-800">
+                    <th className="py-2.5 px-3 w-8 text-center bg-slate-800">
                       <input
                         type="checkbox"
                         checked={stagedCases.length > 0 && stagedCases.every(c => c.selected)}
@@ -1298,16 +1298,16 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
                         className="rounded-sm"
                       />
                     </th>
-                    <th className="py-2.5 px-3">#</th>
-                    <th className="py-2.5 px-3">اسم المريض</th>
-                    <th className="py-2.5 px-3">الرقم الطبي (MRN)</th>
-                    <th className="py-2.5 px-3">التعاقد (Contract)</th>
-                    <th className="py-2.5 px-3">وقت الطلب / الدخول</th>
-                    <th className="py-2.5 px-3">وقت النقل / الخروج</th>
-                    <th className="py-2.5 px-3 text-center">التأخير المحسوب</th>
-                    <th className="py-2.5 px-3">القسم المستهدف</th>
-                    <th className="py-2.5 px-3">سبب التأخير</th>
-                    <th className="py-2.5 px-3 text-center w-28">إجراءات التعديل</th>
+                    <th className="py-2.5 px-3 bg-slate-800">#</th>
+                    <th className="py-2.5 px-3 bg-slate-800">اسم المريض</th>
+                    <th className="py-2.5 px-3 bg-slate-800">الرقم الطبي (MRN)</th>
+                    <th className="py-2.5 px-3 bg-slate-800">التعاقد (Contract)</th>
+                    <th className="py-2.5 px-3 bg-slate-800">وقت الطلب / الدخول</th>
+                    <th className="py-2.5 px-3 bg-slate-800">وقت النقل / الخروج</th>
+                    <th className="py-2.5 px-3 text-center bg-slate-800">التأخير المحسوب</th>
+                    <th className="py-2.5 px-3 bg-slate-800">القسم المستهدف</th>
+                    <th className="py-2.5 px-3 bg-slate-800">سبب التأخير</th>
+                    <th className="py-2.5 px-3 text-center w-28 bg-slate-800">إجراءات التعديل</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
