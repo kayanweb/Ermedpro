@@ -39,6 +39,17 @@ const pool = new Pool({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// URL normalization middleware for Vercel Serverless Functions and reverse proxies
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const forwardedUri = (req.headers['x-forwarded-uri'] || req.headers['x-matched-path']) as string | undefined;
+  if (forwardedUri && forwardedUri.startsWith('/api') && req.url === '/api') {
+    req.url = forwardedUri;
+  } else if (!req.url.startsWith('/api') && !req.url.startsWith('/assets') && req.url !== '/' && !req.url.startsWith('/index.html')) {
+    req.url = '/api' + (req.url.startsWith('/') ? req.url : '/' + req.url);
+  }
+  next();
+});
+
 // Background non-blocking database initialization (ensures tables are created on Neon automatically without blocking API requests)
 let dbInitStarted = false;
 function ensureDbInitializedAsync() {
@@ -1656,11 +1667,22 @@ app.get('/api/analytics/advanced', async (req: Request, res: Response) => {
 // ==========================================
 // API 404 JSON FALLBACK (Prevents /api/* from falling through to Vite SPA HTML)
 // ==========================================
-app.all('/api/*', (req: Request, res: Response) => {
+app.all(['/api', '/api/*'], (req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     error: `API route not found: ${req.method} ${req.originalUrl}`,
   });
+});
+
+// Express global error handler to prevent Function Invocation Crash
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('API runtime error:', err);
+  if (!res.headersSent) {
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Internal server error',
+    });
+  }
 });
 
 // ==========================================
