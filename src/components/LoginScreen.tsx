@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { User } from '../types';
-import { USERS } from '../constants';
-import { loginUser, fetchUsersFromDb } from '../services/api';
-import { AlertCircle, Shield, MessageCircle, Eye, EyeOff, LogIn, Loader2, Sparkles, User as UserIcon } from 'lucide-react';
+import { loginUser, normalizeArabicDigits } from '../services/api';
+import { AlertCircle, Shield, MessageCircle, Eye, EyeOff, LogIn, Loader2, User as UserIcon, Lock, HelpCircle } from 'lucide-react';
 
 interface LoginScreenProps {
   onLogin: (user: User) => void;
@@ -14,32 +13,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [availableUsers, setAvailableUsers] = useState<User[]>(USERS);
-
-  // Fetch actual live users from database so any newly created user is immediately available
-  useEffect(() => {
-    let isMounted = true;
-    fetchUsersFromDb()
-      .then(users => {
-        if (isMounted && users && users.length > 0) {
-          setAvailableUsers(users);
-        }
-      })
-      .catch(() => {
-        // Fallback to default USERS constant
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const [showHelpHint, setShowHelpHint] = useState(false);
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!username.trim()) {
-      setError('يرجى إدخال اسم المستخدم');
+    const cleanU = normalizeArabicDigits(username.trim());
+    const cleanP = normalizeArabicDigits(password.trim());
+
+    if (!cleanU) {
+      setError('يرجى إدخال اسم المستخدم أو رقم الموظف');
       return;
     }
-    if (!password) {
+    if (!cleanP) {
       setError('يرجى إدخال كلمة المرور');
       return;
     }
@@ -48,7 +33,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     setIsLoading(true);
 
     try {
-      const authenticatedUser = await loginUser(username, password);
+      const authenticatedUser = await loginUser(cleanU, cleanP);
       onLogin(authenticatedUser);
     } catch (err: any) {
       console.error('Login error:', err);
@@ -58,16 +43,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     }
   };
 
-  const handleSelectQuickUser = (user: User) => {
-    setUsername(user.username);
-    // Real users default password is '123'
-    setPassword(user.password || '123');
-    setError('');
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-slate-100">
-      <div className="w-full max-w-lg bg-white text-slate-800 rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
+      <div className="w-full max-w-md bg-white text-slate-800 rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
         {/* Header Banner */}
         <div className="bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-800 p-6 sm:p-7 text-white text-center relative overflow-hidden">
           <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-white/10 blur-xl"></div>
@@ -85,27 +63,37 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         </div>
 
         <div className="p-6 sm:p-8 space-y-6">
-          {/* Error Message */}
+          {/* Error Message with Smart Guidance */}
           {error && (
-            <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm flex items-center gap-2.5 animate-fadeIn">
-              <AlertCircle className="w-5 h-5 shrink-0 text-red-500" />
-              <span className="font-semibold">{error}</span>
+            <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm space-y-1.5 animate-fadeIn">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 shrink-0 text-red-500" />
+                <span className="font-bold">{error}</span>
+              </div>
+              <p className="text-[11px] text-red-600 leading-relaxed ps-7">
+                تأكد من رقم الموظف (مثل <code className="bg-red-100 px-1 rounded font-bold">21094</code> أو <code className="bg-red-100 px-1 rounded font-bold">20810</code> أو <code className="bg-red-100 px-1 rounded font-bold">admin</code>) وكلمة المرور الافتراضية (<code className="bg-red-100 px-1 rounded font-bold">123</code>).
+              </p>
             </div>
           )}
 
           {/* Login Form */}
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
-                <UserIcon className="w-3.5 h-3.5 text-slate-500" />
-                <span>اسم المستخدم أو رقم الموظف (Username)</span>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <UserIcon className="w-3.5 h-3.5 text-slate-500" />
+                  <span>اسم المستخدم أو رقم الموظف (Username)</span>
+                </span>
               </label>
               <input
                 id="login-username-input"
                 type="text"
                 value={username}
-                onChange={e => setUsername(e.target.value)}
-                placeholder="أدخل اسم المستخدم (مثال: admin أو 20810)"
+                onChange={e => {
+                  setError('');
+                  setUsername(normalizeArabicDigits(e.target.value));
+                }}
+                placeholder="أدخل اسم المستخدم أو رقم الموظف..."
                 required
                 disabled={isLoading}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 text-sm transition outline-none font-semibold bg-slate-50 focus:bg-white"
@@ -114,15 +102,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
-                <span>كلمة المرور (Password)</span>
-                <span className="text-[11px] font-normal text-slate-400">كلمة المرور الافتراضية: 123</span>
+                <span className="flex items-center gap-1">
+                  <Lock className="w-3.5 h-3.5 text-slate-500" />
+                  <span>كلمة المرور (Password)</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowHelpHint(!showHelpHint)}
+                  className="text-[11px] text-slate-400 hover:text-indigo-600 flex items-center gap-0.5 cursor-pointer"
+                  title="المساعدة في الدخول"
+                >
+                  <HelpCircle className="w-3 h-3" />
+                  <span>مساعدة</span>
+                </button>
               </label>
               <div className="relative">
                 <input
                   id="login-password-input"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={e => {
+                    setError('');
+                    setPassword(normalizeArabicDigits(e.target.value));
+                  }}
                   placeholder="أدخل كلمة المرور"
                   required
                   disabled={isLoading}
@@ -131,12 +133,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 end-0 flex items-center pe-3 text-slate-400 hover:text-slate-600 transition"
+                  className="absolute inset-y-0 end-0 flex items-center pe-3 text-slate-400 hover:text-slate-600 transition cursor-pointer"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+
+              {showHelpHint && (
+                <div className="p-2.5 mt-2 bg-indigo-50/80 border border-indigo-200 rounded-xl text-[11px] text-indigo-900 leading-relaxed animate-in fade-in">
+                  <p className="font-bold mb-1">بيانات الحسابات المصرحة بالنظام:</p>
+                  <ul className="space-y-0.5 text-indigo-800">
+                    <li>• الإدارة: <span className="font-mono font-bold">21094</span> أو <span className="font-mono font-bold">admin</span> (كلمة المرور: <span className="font-mono font-bold">123</span>)</li>
+                    <li>• التمريض: <span className="font-mono font-bold">20810</span> (كلمة المرور: <span className="font-mono font-bold">123</span>)</li>
+                  </ul>
+                </div>
+              )}
             </div>
 
             <button
@@ -159,44 +171,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
               )}
             </button>
           </form>
-
-          {/* Quick Select Hospital Accounts */}
-          <div className="pt-4 border-t border-slate-100">
-            <div className="flex items-center justify-between mb-2.5">
-              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>حسابات المستشفى المصرحة (اختيار سريع):</span>
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono">انقر للملء السريع</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {availableUsers.slice(0, 6).map((u, idx) => (
-                <button
-                  key={u.id || u.username || idx}
-                  type="button"
-                  onClick={() => handleSelectQuickUser(u)}
-                  className={`p-2.5 rounded-xl border text-start transition cursor-pointer flex flex-col justify-between ${
-                    username.toLowerCase() === u.username.toLowerCase()
-                      ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-400/20'
-                      : 'bg-slate-50 hover:bg-indigo-50/60 border-slate-200 hover:border-indigo-300'
-                  }`}
-                >
-                  <div className="font-bold text-xs text-slate-800 truncate" title={u.name}>
-                    {u.name}
-                  </div>
-                  <div className="mt-1 flex items-center justify-between text-[10px]">
-                    <span className="font-mono text-indigo-600 font-semibold bg-indigo-50 px-1 rounded">
-                      {u.username}
-                    </span>
-                    <span className="text-slate-500 truncate max-w-[80px]" title={u.titleAr || u.role}>
-                      {u.titleAr || u.role}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
 
           {/* Secure Developer Signature & Contact */}
           <div className="pt-4 border-t border-slate-100 text-center space-y-3">
