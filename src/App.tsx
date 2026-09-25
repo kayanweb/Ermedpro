@@ -43,13 +43,12 @@ export default function App() {
 
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
-      const saved = sessionStorage.getItem('er_user');
+      const saved = sessionStorage.getItem('er_user') || localStorage.getItem('er_user');
       if (saved) return JSON.parse(saved);
     } catch {
       // ignore
     }
-    // Default to admin for instant access
-    return USERS[0];
+    return null;
   });
 
   // Records and Beds state - sourced directly from Neon Cloud PostgreSQL
@@ -165,7 +164,12 @@ export default function App() {
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
-    sessionStorage.setItem('er_user', JSON.stringify(user));
+    try {
+      sessionStorage.setItem('er_user', JSON.stringify(user));
+      localStorage.setItem('er_user', JSON.stringify(user));
+    } catch {
+      // ignore
+    }
     soundService.playChime();
     addToast(
       lang === 'ar'
@@ -176,7 +180,13 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('er_user');
+    try {
+      sessionStorage.removeItem('er_user');
+      localStorage.removeItem('er_user');
+      sessionStorage.clear();
+    } catch {
+      // ignore
+    }
     setCurrentUser(null);
     addToast(lang === 'ar' ? 'تم تسجيل الخروج بنجاح' : 'Logged out successfully', 'info');
   };
