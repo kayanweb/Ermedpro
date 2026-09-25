@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { DepartmentType, ERRecord } from '../types';
-import { REASONS, DEPARTMENTS, CONTRACT_TYPES, CAME_FROM_OPTIONS, SAMPLE_HIS_DATA, SAMPLE_SIMPLE_DATA } from '../constants';
+import { REASONS, DEPARTMENTS, CONTRACT_TYPES, CAME_FROM_OPTIONS, SAMPLE_HIS_DATA, SAMPLE_EXCEL_LOGBOOK_DATA, SAMPLE_SIMPLE_DATA } from '../constants';
 import { parseFullDateTime, toLocalDatetimeInput, calcMinutesDiff, fmtDateTime } from '../utils/dateTime';
 import { formatErrorMessage } from '../utils/errorUtils';
+import { parseHospitalPaste } from '../utils/hisParser';
 import { DoctorSelect } from './DoctorSelect';
 import {
   UploadCloud,
@@ -247,10 +248,26 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
   const handleParse = () => {
     const text = pasteText.trim();
     if (!text) {
-      setFeedback({ type: 'error', message: 'يرجى لصق بيانات HIS أولاً في الصندوق أدناه' });
+      setFeedback({ type: 'error', message: 'يرجى لصق بيانات HIS أو شيت الإكسيل أولاً في الصندوق أدناه' });
       return;
     }
 
+    // 1. Attempt intelligent automatic detection for Hospital HIS or Excel Logbook
+    const smartParsed = parseHospitalPaste(text, defaultDept, defaultReason, defaultContract, currentUserName);
+    if (smartParsed.cases.length > 0) {
+      setStagedCases(smartParsed.cases);
+      if (smartParsed.rawRows && smartParsed.rawRows.length > 0) {
+        setParsedRows(smartParsed.rawRows);
+        setHeaders(smartParsed.rawRows[0].map((_, i) => `حقل ${i + 1}`));
+      }
+      setFeedback({
+        type: 'success',
+        message: `تم التعرف الذكي التلقائي على [${smartParsed.detectedFormatTitleAr}]: تم استخراج وتحليل ${smartParsed.cases.length} حالة بنجاح مع مطابقة جهات التعاقد وحساب مدد التأخير والأوقات آلياً!`,
+      });
+      return;
+    }
+
+    // 2. Generic delimiter fallback
     const lines = text.split(/\r?\n/).filter(l => l.trim());
     if (!lines.length) {
       setFeedback({ type: 'error', message: 'لم يتم العثور على أسطر صالحة' });
@@ -550,19 +567,26 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
           </div>
         </div>
 
-        <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-4 text-xs text-slate-700 space-y-2">
-          <div className="font-bold text-blue-900 flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-blue-600" />
-            <span>خطوات الاستيراد مع التعديل قبل الاعتماد:</span>
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50/70 border border-blue-200 rounded-xl p-4 text-xs text-slate-700 space-y-2">
+          <div className="font-bold text-blue-900 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-blue-600" />
+              <span>دعم كامل لكلا طريقتي النسخ المعتمدة بالمستشفى:</span>
+            </span>
+            <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+              التعرف الذكي التلقائي
+            </span>
           </div>
-          <ol className="list-decimal list-inside space-y-1 text-slate-600 pr-1">
-            <li>الصق صفوف جدول HIS أو ملف Excel في الصندوق أدناه واضغط <b>تحليل البيانات</b>.</li>
-            <li>سيقوم النظام تلقائياً بتوليد <b>جدول المعاينة والتعديل المباشر</b>.</li>
-            <li>
-              <b>يمكنك تعديل أي مريض، تغيير القسم، تعديل وقت الطلب أو النقل، أو استبعاد صفوف</b> بكل مرونة قبل الحفظ.
-            </li>
-            <li>اضغط <b>اعتماد الحفظ ونقل الحالات للشيت</b> لحفظ البيانات المعدلة في قاعدة البيانات الرسمية.</li>
-          </ol>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-600 text-[11px] pt-1">
+            <div className="p-2.5 rounded-lg bg-white/80 border border-blue-100">
+              <span className="font-bold text-blue-950 block mb-1">1. النسخ من شاشات نظام HIS المباشر:</span>
+              يدعم قراءة الرقم الطبي (MRN)، الاسم، جهة الحضور (من المنزل)، التعاقد (مرضى بهية، نقدي، مجلس الوزراء)، وتواريخ الدخول والخروج آلياً.
+            </div>
+            <div className="p-2.5 rounded-lg bg-white/80 border border-blue-100">
+              <span className="font-bold text-indigo-950 block mb-1">2. النسخ من شيتات إكسيل الطوارئ (Excel):</span>
+              يدعم قراءة التاريخ، الاسم، الأوقات، الأقسام وحساب مدد التأخير (مثل <code className="bg-indigo-50 text-indigo-700 px-1 rounded font-bold">30 MIN TO INP</code> أو <code className="bg-indigo-50 text-indigo-700 px-1 rounded font-bold">5 HRS TO ICU</code>) وأسباب التأخير.
+            </div>
+          </div>
         </div>
 
         {/* Feedback alert */}
@@ -595,15 +619,16 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
 
         {/* Paste Box */}
         <div className="mt-4">
-          <label className="block text-xs font-bold text-slate-700 mb-1.5">
-            صندوق لصق بيانات HIS (Paste HIS Data):
+          <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+            <span>صندوق لصق البيانات (Paste HIS / Excel Data):</span>
+            <span className="text-[11px] text-slate-500 font-normal">انسخ من جدول نظام HIS أو من شيت الإكسيل والصق مباشرةً</span>
           </label>
           <textarea
             id="his-paste-textarea"
             value={pasteText}
             onChange={e => setPasteText(e.target.value)}
-            placeholder="انسخ صفوف التقرير من نظام HIS أو Excel والصقها هنا..."
-            rows={6}
+            placeholder="انسخ صفوف التقرير من نظام HIS أو شيت Excel والصقها هنا..."
+            rows={7}
             className="w-full p-3.5 font-mono text-xs bg-slate-50 border-2 border-dashed border-blue-300 rounded-xl focus:bg-white focus:border-blue-600 outline-hidden transition text-slate-800"
           />
         </div>
@@ -613,7 +638,7 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
           <button
             id="parse-his-btn"
             onClick={handleParse}
-            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-2 cursor-pointer"
+            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-2 cursor-pointer"
           >
             <span>🔍 تحليل البيانات وتحضيرها للمراجعة والتعديل</span>
           </button>
@@ -622,11 +647,24 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
             type="button"
             onClick={() => {
               setPasteText(SAMPLE_HIS_DATA);
-              setFeedback({ type: 'info', message: 'تم تحميل نموذج HIS المعتمد. اضغط الآن "تحليل البيانات".' });
+              setFeedback({ type: 'info', message: 'تم تحميل نموذج نسخ HIS المباشر (20 حالة حقيقية). اضغط الآن "تحليل البيانات".' });
             }}
-            className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold text-xs rounded-xl transition cursor-pointer"
+            className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5"
+            title="تجربة البيانات المنسوخة مباشرة من نظام HIS"
           >
-            📋 نموذج HIS المستشفى
+            📋 نسخ HIS المباشر (20 حالة)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setPasteText(SAMPLE_EXCEL_LOGBOOK_DATA);
+              setFeedback({ type: 'info', message: 'تم تحميل نموذج شيت إكسيل الطوارئ (Excel Logbook). اضغط الآن "تحليل البيانات".' });
+            }}
+            className="px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5"
+            title="تجربة البيانات المنسوخة من شيت إكسيل المستشفى"
+          >
+            📊 شيت إكسيل الطوارئ (Excel)
           </button>
 
           <button
@@ -635,7 +673,7 @@ export const ImportTab: React.FC<ImportTabProps> = ({ onImportSuccess, currentUs
               setPasteText(SAMPLE_SIMPLE_DATA);
               setFeedback({ type: 'info', message: 'تم تحميل النموذج المبسط. اضغط الآن "تحليل البيانات".' });
             }}
-            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-semibold text-xs rounded-xl transition cursor-pointer"
+            className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-semibold text-xs rounded-xl transition cursor-pointer"
           >
             📋 نموذج مبسط
           </button>
