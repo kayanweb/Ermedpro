@@ -17,7 +17,7 @@ const ai = new GoogleGenAI({
 });
 
 /**
- * Phonetic transliterator fallback for common Arabic names
+ * Phonetic transliterator fallback for common Arabic names with Egyptian spelling and spacing rules
  */
 function localTransliterateEnglishNameToArabic(engName: string): string {
   if (!engName) return '';
@@ -84,6 +84,32 @@ function localTransliterateEnglishNameToArabic(engName: string): string {
     'laila': 'ليلى',
     'hala': 'هالة',
     'zeinab': 'زينب',
+    'solafa': 'سولافا', 'sulafa': 'سولافا',
+    'hossam': 'حسام',
+    'maged': 'ماجد',
+    'asmaa': 'أسماء',
+    'wafaa': 'وفاء',
+    'samir': 'سمير',
+    'saeed': 'سعيد',
+    'nasser': 'ناصر',
+    'refaat': 'رفعت',
+    'taha': 'طه',
+    'osama': 'أسامة',
+    'hesham': 'هشام',
+    'ziad': 'زياد',
+    'youssef': 'يوسف',
+    'yousef': 'يوسف',
+    'ismail': 'إسماعيل',
+    'zakaria': 'زكريا',
+    'osman': 'عثمان',
+    'badr': 'بدر',
+    'fouad': 'فؤاد',
+    'mamdouh': 'ممدوح',
+    'morsy': 'مرسي',
+    'shaban': 'شعبان',
+    'ramadan': 'رمضان',
+    'ragab': 'رجب',
+    'gomaa': 'جمعة'
   };
 
   const parts = clean.split(' ');
@@ -122,23 +148,19 @@ function localTransliterateEnglishNameToArabic(engName: string): string {
     tr = tr.replace(/r/g, 'ر');
     tr = tr.replace(/z/g, 'ز');
     tr = tr.replace(/s/g, 'س');
+    tr = tr.replace(/c/g, 'س');
     tr = tr.replace(/f/g, 'ف');
     tr = tr.replace(/q/g, 'ق');
     tr = tr.replace(/k/g, 'ك');
     tr = tr.replace(/l/g, 'ل');
     tr = tr.replace(/m/g, 'م');
     tr = tr.replace(/n/g, 'ن');
-    tr = tr.replace(/y/g, 'ي');
     tr = tr.replace(/w/g, 'و');
-    
-    tr = tr.replace(/ا+/g, 'ا');
-    tr = tr.replace(/ي+/g, 'ي');
-    tr = tr.replace(/و+/g, 'و');
-    
+    tr = tr.replace(/y/g, 'ي');
     return tr;
   });
 
-  return translatedParts.filter(Boolean).join(' ');
+  return translatedParts.join(' ');
 }
 
 const { Pool } = pg;
